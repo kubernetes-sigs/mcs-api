@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 	"sigs.k8s.io/mcs-api/pkg/controllers"
-	// "sigs.k8s.io/mcs-api/pkg/controllers"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -37,9 +36,8 @@ var (
 )
 
 func init() {
-	_ = clientgoscheme.AddToScheme(scheme)
-
-	_ = v1alpha1.AddToScheme(scheme)
+	clientgoscheme.AddToScheme(scheme)
+	v1alpha1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 
