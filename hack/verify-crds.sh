@@ -19,8 +19,8 @@ set -o nounset
 set -o pipefail
 
 SCRIPT_ROOT=$(dirname "${BASH_SOURCE}")/..
-DIFFROOT="${SCRIPT_ROOT}/config/crd/bases"
-TMP_DIFFROOT="${SCRIPT_ROOT}/_tmp/config/crd/bases"
+DIFFROOT="${SCRIPT_ROOT}/config"
+TMP_DIFFROOT="${SCRIPT_ROOT}/_tmp/config"
 _tmp="${SCRIPT_ROOT}/_tmp"
 # The controller-gen command for generating CRDs from API definitions.
 CONTROLLER_GEN="go run sigs.k8s.io/controller-tools/cmd/controller-gen"
@@ -39,8 +39,9 @@ cleanup
 mkdir -p "${TMP_DIFFROOT}"
 cp -a "${DIFFROOT}"/* "${TMP_DIFFROOT}"
 
-${CONTROLLER_GEN} ${CRD_OPTIONS} rbac:roleName=manager-role webhook \
-paths="./..." output:crd:artifacts:config=${TMP_DIFFROOT}
+${CONTROLLER_GEN} ${CRD_OPTIONS} rbac:roleName=derived-service-manager webhook \
+paths="${SCRIPT_ROOT}/..." schemapatch:manifests="${SCRIPT_ROOT}/config/crd-base" output:crd:none \
+output:schemapatch:dir="${TMP_DIFFROOT}/crd" output:rbac:dir="${TMP_DIFFROOT}/rbac"
 
 echo "diffing ${DIFFROOT} against freshly generated codegen in ${TMP_DIFFROOT}"
 ret=0
