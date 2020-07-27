@@ -14,10 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package controllers
+
+import (
+	"crypto/sha256"
+	"encoding/base64"
+
+	"k8s.io/apimachinery/pkg/types"
+)
 
 const (
-	// LabelServiceName is used to indicate the name of multi-cluster service
-	// that an EndpointSlice belongs to.
-	LabelServiceName = "multicluster.kubernetes.io/service-name"
+	derivedServiceAnnotation = "multicluster.kubernetes.io/derived-service"
+	serviceImportKind        = "ServiceImport"
 )
+
+func derivedName(name types.NamespacedName) string {
+	hash := sha256.New()
+	return "import-" + base64.RawURLEncoding.EncodeToString(hash.Sum([]byte(name.String())))[:10]
+}

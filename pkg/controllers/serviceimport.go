@@ -18,10 +18,11 @@ package controllers
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 
 	"github.com/go-logr/logr"
+	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,16 +38,58 @@ type ServiceImportReconciler struct {
 // +kubebuilder:rbac:groups=multicluster.x-k8s.io,resources=serviceimports,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=multicluster.x-k8s.io,resources=serviceimports/status,verbs=get;update;patch
 
-func derivedName(name types.NamespacedName) string {
-	hash := sha256.New()
-	return "import-" + base64.RawURLEncoding.EncodeToString(hash.Sum([]byte(name.String())))[:10]
+func servicePorts(svcImport *v1alpha1.ServiceImport) []v1.ServicePort {
+	ports := make([]v1.ServicePort, len(svcImport.Spec.Ports))
+	for i, p := range svcImport.Spec.Ports {
+		ports[i] = v1.ServicePort{
+			Name:        p.Name,
+			Protocol:    p.Protocol,
+			Port:        p.Port,
+			AppProtocol: p.AppProtocol,
+		}
+	}
+	return ports
 }
 
 // Reconcile the changes.
 func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	serviceName := derivedName(req.NamespacedName)
 	r.Log.WithValues("serviceimport", req.NamespacedName, "derived", serviceName)
+	var svcImport v1alpha1.ServiceImport
+	if err := r.Client.Get(ctx, req.NamespacedName, &svcImport); err != nil {
+		return ctrl.Result{}, err
+	}
+	if svcImport.DeletionTimestamp != nil {
+		return ctrl.Result{}, nil
+	}
+	if svcImport.Spec.Type != v1alpha1.SuperclusterIP {
+		return ctrl.Result{}, nil
+	}
+	// Ensure the existence of the derived service
+	var svc v1.Service
+	if svcImport.Annotations[derivedServiceAnnotation] != "" {
+		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: svcImport.Annotations[derivedServiceAnnotation]}, &svc); err == nil {
+			return ctrl.Result{}, nil
+		} else if !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, err
+		}
+	}
+	svcImport.Annotations[derivedServiceAnnotation] = derivedName(req.NamespacedName)
+	svc = v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: req.Namespace,
+			Name:      svcImport.Annotations[derivedServiceAnnotation],
+			OwnerReferences: []metav1.OwnerReference{
+				{Name: req.Name, Kind: serviceImportKind, APIVersion: v1alpha1.GroupVersion.String()},
+			},
+		},
+		Spec: v1.ServiceSpec{
+			Type:  v1.ServiceTypeClusterIP,
+			Ports: servicePorts(&svcImport),
+		},
+	}
 	return ctrl.Result{}, nil
 }
 

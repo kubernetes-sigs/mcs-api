@@ -27,6 +27,18 @@ rules:
   - patch
   - update
 - apiGroups:
+  - discovery
+  resources:
+  - endpointslices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - multicluster.x-k8s.io
   resources:
   - serviceimports

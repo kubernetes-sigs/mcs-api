@@ -21,8 +21,11 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
 
 // ServiceReconciler reconciles a Service object
@@ -34,11 +37,42 @@ type ServiceReconciler struct {
 // +kubebuilder:rbac:groups=core,resources=service,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=service/status,verbs=get;update;patch
 
+func serviceImportOwner(refs []metav1.OwnerReference) string {
+	for _, ref := range refs {
+		if ref.APIVersion == v1alpha1.GroupVersion.String() && ref.Kind == serviceImportKind {
+			return ref.Name
+		}
+	}
+	return ""
+}
+
 // Reconcile the changes.
 func (r *ServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	r.Log.WithValues("service", req.NamespacedName)
-
+	var service v1.Service
+	if err := r.Client.Get(ctx, req.NamespacedName, &service); err != nil {
+		return ctrl.Result{}, err
+	}
+	if service.DeletionTimestamp != nil {
+		return ctrl.Result{}, nil
+	}
+	importName := serviceImportOwner(service.OwnerReferences)
+	if importName == "" {
+		return ctrl.Result{}, nil
+	}
+	var svcImport v1alpha1.ServiceImport
+	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: importName}, &svcImport); err != nil {
+		return ctrl.Result{}, err
+	}
+	if svcImport.Spec.IP == service.Spec.ClusterIP {
+		return ctrl.Result{}, nil
+	}
+	svcImport.Spec.IP = service.Spec.ClusterIP
+	if err := r.Client.Update(ctx, &svcImport); err != nil {
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 }
 
