@@ -18,8 +18,11 @@ package controllers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
@@ -34,11 +37,16 @@ type ServiceImportReconciler struct {
 // +kubebuilder:rbac:groups=multicluster.x-k8s.io,resources=serviceimports,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=multicluster.x-k8s.io,resources=serviceimports/status,verbs=get;update;patch
 
+func derivedName(name types.NamespacedName) string {
+	hash := sha256.New()
+	return "import-" + base64.RawURLEncoding.EncodeToString(hash.Sum([]byte(name.String())))[:10]
+}
+
 // Reconcile the changes.
 func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	r.Log.WithValues("serviceimport", req.NamespacedName)
-
+	serviceName := derivedName(req.NamespacedName)
+	r.Log.WithValues("serviceimport", req.NamespacedName, "derived", serviceName)
 	return ctrl.Result{}, nil
 }
 

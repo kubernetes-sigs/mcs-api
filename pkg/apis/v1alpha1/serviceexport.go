@@ -23,7 +23,6 @@ import (
 
 // +genclient
 // +kubebuilder:object:root=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ServiceExport declares that the Service with the same name and namespace
 // as this export should be consumable from other clusters.
@@ -85,7 +84,6 @@ type ServiceExportCondition struct {
 }
 
 // +kubebuilder:object:root=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ServiceExportList represents a list of endpoint slices
 type ServiceExportList struct {

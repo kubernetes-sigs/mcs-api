@@ -28,6 +28,7 @@ controller:
 # Run generators for Deepcopy funcs and CRDs
 .PHONY: generate
 generate:
+	./hack/update-codegen.sh
 	$(MAKE) -f kubebuilder.mk generate
 	$(MAKE) manifests
 
@@ -48,9 +49,9 @@ crd:
 # Remove installed CRD's and CR's.
 .PHONY: uninstall
 uninstall:
-	hack/delete-crds.sh
+	./hack/delete-crds.sh
 
 # Run static analysis.
 .PHONY: verify
 verify:
-	hack/verify-all.sh
+	./hack/verify-all.sh

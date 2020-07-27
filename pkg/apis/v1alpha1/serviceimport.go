@@ -23,7 +23,6 @@ import (
 
 // +genclient
 // +kubebuilder:object:root=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ServiceImport describes a service imported from clusters in a supercluster.
 type ServiceImport struct {
@@ -123,7 +122,6 @@ type ClusterStatus struct {
 }
 
 // +kubebuilder:object:root=true
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ServiceImportList represents a list of endpoint slices
 type ServiceImportList struct {
