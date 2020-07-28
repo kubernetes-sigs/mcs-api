@@ -12,27 +12,16 @@ rules:
   - services
   verbs:
   - create
-  - delete
   - get
   - list
   - patch
   - update
   - watch
 - apiGroups:
-  - ""
-  resources:
-  - services/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
   - discovery.k8s.io
   resources:
   - endpointslices
   verbs:
-  - create
-  - delete
   - get
   - list
   - patch
@@ -43,18 +32,8 @@ rules:
   resources:
   - serviceimports
   verbs:
-  - create
-  - delete
   - get
   - list
   - patch
   - update
   - watch
-- apiGroups:
-  - multicluster.x-k8s.io
-  resources:
-  - serviceimports/status
-  verbs:
-  - get
-  - patch
-  - update

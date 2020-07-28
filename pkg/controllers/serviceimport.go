@@ -35,8 +35,7 @@ type ServiceImportReconciler struct {
 	Log logr.Logger
 }
 
-// +kubebuilder:rbac:groups=multicluster.x-k8s.io,resources=serviceimports,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=multicluster.x-k8s.io,resources=serviceimports/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=multicluster.x-k8s.io,resources=serviceimports,verbs=get;list;watch;update;patch
 
 func servicePorts(svcImport *v1alpha1.ServiceImport) []v1.ServicePort {
 	ports := make([]v1.ServicePort, len(svcImport.Spec.Ports))

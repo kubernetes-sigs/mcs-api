@@ -34,8 +34,7 @@ type ServiceReconciler struct {
 	Log logr.Logger
 }
 
-// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=core,resources=services/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch
 
 func serviceImportOwner(refs []metav1.OwnerReference) string {
 	for _, ref := range refs {
@@ -66,10 +65,10 @@ func (r *ServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: importName}, &svcImport); err != nil {
 		return ctrl.Result{}, err
 	}
-	if svcImport.Spec.IP == service.Spec.ClusterIP {
+	if len(svcImport.Spec.IPs) == 1 && svcImport.Spec.IPs[0] == service.Spec.ClusterIP {
 		return ctrl.Result{}, nil
 	}
-	svcImport.Spec.IP = service.Spec.ClusterIP
+	svcImport.Spec.IPs = []string{service.Spec.ClusterIP}
 	if err := r.Client.Update(ctx, &svcImport); err != nil {
 		return ctrl.Result{}, err
 	}

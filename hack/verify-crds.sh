@@ -39,7 +39,7 @@ cleanup
 mkdir -p "${TMP_DIFFROOT}"
 cp -a "${DIFFROOT}"/* "${TMP_DIFFROOT}"
 
-${CONTROLLER_GEN} ${CRD_OPTIONS} rbac:roleName=derived-service-manager webhook \
+${CONTROLLER_GEN} ${CRD_OPTIONS} rbac:roleName=mcs-derived-service-manager webhook \
 paths="${SCRIPT_ROOT}/..." schemapatch:manifests="${SCRIPT_ROOT}/config/crd-base" output:crd:none \
 output:schemapatch:dir="${TMP_DIFFROOT}/crd" output:rbac:dir="${TMP_DIFFROOT}/rbac"
 

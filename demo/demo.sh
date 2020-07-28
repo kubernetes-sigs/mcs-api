@@ -68,9 +68,9 @@ function import_ip() {
 
 waitfor import_ip
 
-vip=$(${k1} get serviceimport -n demo -o go-template --template='{{(index .items 0).spec.ip}}')
+vip=$(${k1} get serviceimport -n demo -o go-template --template='{{index (index .items 0).spec.ips 0}}')
 desc "Now grap the multi-cluster VIP from the serviceimport..."
-run "${k1} get serviceimport -n demo -o go-template --template='{{(index .items 0).spec.ip}}{{\"\n\"}}'"
+run "${k1} get serviceimport -n demo -o go-template --template='{{(index (index .items 0).spec.ips 0}}{{\"\n\"}}'"
 desc "...and connect to it"
 run "${k1} -n demo run -i --rm --restart=Never --image=jeremyot/request request -- --duration=10s --address=${vip}"
 desc "We have a multi-cluster service!"

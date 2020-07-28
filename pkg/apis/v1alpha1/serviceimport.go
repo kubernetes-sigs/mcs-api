@@ -53,8 +53,9 @@ type ServiceImportSpec struct {
 	// +listType=atomic
 	Ports []ServicePort `json:"ports"`
 	// ip will be used as the VIP for this service when type is SuperclusteriP.
+	// +kubebuilder:validation:MaxItems:=1
 	// +optional
-	IP string `json:"ip,omitempty"`
+	IPs []string `json:"ips,omitempty"`
 	// type defines the type of this service.
 	// Must be SuperclusterIP or Headless.
 	// +required

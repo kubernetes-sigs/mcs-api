@@ -25,11 +25,11 @@ import (
 )
 
 const (
+	// DerivedServiceAnnotation is set on a ServiceImport to reference the
+	// derived Service that represents the imported service for kube-proxy.
 	DerivedServiceAnnotation = "multicluster.kubernetes.io/derived-service"
 	serviceImportKind        = "ServiceImport"
 )
-
-var onlyPortName = "onlyport"
 
 func derivedName(name types.NamespacedName) string {
 	hash := sha256.New()

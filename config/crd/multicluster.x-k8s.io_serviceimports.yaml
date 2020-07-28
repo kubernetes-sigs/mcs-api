@@ -55,10 +55,13 @@ spec:
             - ports
             - type
             properties:
-              ip:
+              ips:
                 description: ip will be used as the VIP for this service when type
                   is SuperclusteriP.
-                type: string
+                type: array
+                maxItems: 1
+                items:
+                  type: string
               ports:
                 type: array
                 items:

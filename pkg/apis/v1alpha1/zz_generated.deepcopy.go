@@ -218,6 +218,11 @@ func (in *ServiceImportSpec) DeepCopyInto(out *ServiceImportSpec) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.IPs != nil {
+		in, out := &in.IPs, &out.IPs
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.SessionAffinityConfig != nil {
 		in, out := &in.SessionAffinityConfig, &out.SessionAffinityConfig
 		*out = new(v1.SessionAffinityConfig)
