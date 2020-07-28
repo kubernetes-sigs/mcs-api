@@ -37,8 +37,8 @@ function cleanup() {
 }
 trap cleanup EXIT
 
-tmux send -t $c1_pane "go run ../cmd/servicecontroller/servicecontroller.go --kubeconfig=${c1}.kubeconfig --metrics-addr=':8081'" Enter
-tmux send -t $c2_pane "go run ../cmd/servicecontroller/servicecontroller.go --kubeconfig=${c2}.kubeconfig --metrics-addr=':8082'" Enter
+tmux send -t $c1_pane "${k1} logs -f mcs-api-controller" Enter
+tmux send -t $c2_pane "${k2} logs -f mcs-api-controller" Enter
 
 desc "Create our service in each cluster"
 run "${k1} apply -f yaml/dep1.yaml -f yaml/svc.yaml"

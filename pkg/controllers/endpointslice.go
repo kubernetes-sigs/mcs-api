@@ -33,7 +33,7 @@ type EndpointSliceReconciler struct {
 	Log logr.Logger
 }
 
-// +kubebuilder:rbac:groups=discovery,resources=endpointslices,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile the changes.
 func (r *EndpointSliceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {

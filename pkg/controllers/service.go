@@ -34,8 +34,8 @@ type ServiceReconciler struct {
 	Log logr.Logger
 }
 
-// +kubebuilder:rbac:groups=core,resources=service,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=core,resources=service/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=services/status,verbs=get;update;patch
 
 func serviceImportOwner(refs []metav1.OwnerReference) string {
 	for _, ref := range refs {

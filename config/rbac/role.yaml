@@ -4,12 +4,12 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: derived-service-manager
+  name: mcs-derived-service-manager
 rules:
 - apiGroups:
   - ""
   resources:
-  - service
+  - services
   verbs:
   - create
   - delete
@@ -21,13 +21,13 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - service/status
+  - services/status
   verbs:
   - get
   - patch
   - update
 - apiGroups:
-  - discovery
+  - discovery.k8s.io
   resources:
   - endpointslices
   verbs:

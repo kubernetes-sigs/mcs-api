@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= mcs-api-controller:latest
 # Need v1 to support defaults in CRDs, unfortunately limiting us to k8s 1.16+
 CRD_OPTIONS ?= "crd:crdVersions=v1"
 
@@ -59,7 +59,7 @@ deploy: manifests
 
 # Generate manifests e.g. CRD, RBAC etc.
 manifests:
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=derived-service-manager webhook schemapatch:manifests="config/crd-base" paths="./..." output:crd:none output:schemapatch:dir="config/crd"
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=mcs-derived-service-manager webhook schemapatch:manifests="config/crd-base" paths="./..." output:crd:none output:schemapatch:dir="config/crd"
 
 # Run go fmt against code
 fmt:

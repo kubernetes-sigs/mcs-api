@@ -24,11 +24,23 @@ set -x
 c1=c1
 c2=c2
 
+k1="kubectl --kubeconfig ${c1}.kubeconfig"
+k2="kubectl --kubeconfig ${c2}.kubeconfig"
+
+if [ -z "$(docker images mcs-api-controller -q)" ]; then
+  pushd ../
+  make -f kubebuilder.mk docker-build
+  popd
+fi
+
 kind create cluster --name "${c1}" --config "yaml/${c1}.yaml"
 kind create cluster --name "${c2}" --config "yaml/${c2}.yaml"
 
 kind get kubeconfig --name "${c1}" > "${c1}".kubeconfig
 kind get kubeconfig --name "${c2}" > "${c2}".kubeconfig
+
+kind load docker-image mcs-api-controller --name "${c1}"
+kind load docker-image mcs-api-controller --name "${c2}"
 
 function pod_cidrs() {
   kubectl --kubeconfig ${1}.kubeconfig get nodes -o jsonpath='{range .items[*]}{.spec.podCIDR}{"\n"}'
@@ -55,5 +67,13 @@ add_routes "${c1}" "${c2}"
 add_routes "${c2}" "${c1}"
 echo "Cluster networks connected"
 
-kubectl --kubeconfig "${c1}.kubeconfig" apply -f ../config/crd
-kubectl --kubeconfig "${c2}.kubeconfig" apply -f ../config/crd
+${k1} apply -f ../config/crd -f ../config/rbac
+${k2} apply -f ../config/crd -f ../config/rbac
+
+${k1} create sa mcs-api-controller
+${k1} create clusterrolebinding mcs-api-binding --clusterrole=mcs-derived-service-manager --serviceaccount=default:mcs-api-controller
+${k1} run --image mcs-api-controller --serviceaccount=mcs-api-controller --image-pull-policy=Never mcs-api-controller
+
+${k2} create sa mcs-api-controller
+${k2} create clusterrolebinding mcs-api-binding --clusterrole=mcs-derived-service-manager --serviceaccount=default:mcs-api-controller
+${k2} run --image mcs-api-controller --serviceaccount=mcs-api-controller --image-pull-policy=Never mcs-api-controller
