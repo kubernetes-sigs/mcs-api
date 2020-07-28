@@ -14,11 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
-set -x
+cd $(dirname ${BASH_SOURCE})
+. ./udemo.sh
 
 c1=c1
 c2=c2
+k1="kubectl --kubeconfig ${c1}.kubeconfig"
+k2="kubectl --kubeconfig ${c2}.kubeconfig"
 
-kind delete cluster --name "${c1}"
-kind delete cluster --name "${c2}"
+${k1} delete ns demo
+${k2} delete ns demo

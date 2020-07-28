@@ -69,26 +69,39 @@ func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	}
 	// Ensure the existence of the derived service
 	var svc v1.Service
-	if svcImport.Annotations[derivedServiceAnnotation] != "" {
-		if err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: svcImport.Annotations[derivedServiceAnnotation]}, &svc); err == nil {
-			return ctrl.Result{}, nil
-		} else if !apierrors.IsNotFound(err) {
+
+	if svcImport.Annotations[derivedServiceAnnotation] == "" {
+		svcImport.Annotations[derivedServiceAnnotation] = derivedName(req.NamespacedName)
+		if err := r.Client.Update(ctx, &svcImport); err != nil {
 			return ctrl.Result{}, err
 		}
+		return ctrl.Result{}, nil
 	}
-	svcImport.Annotations[derivedServiceAnnotation] = derivedName(req.NamespacedName)
+	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: svcImport.Annotations[derivedServiceAnnotation]}, &svc); err == nil {
+		return ctrl.Result{}, nil
+	} else if !apierrors.IsNotFound(err) {
+		return ctrl.Result{}, err
+	}
 	svc = v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: req.Namespace,
 			Name:      svcImport.Annotations[derivedServiceAnnotation],
 			OwnerReferences: []metav1.OwnerReference{
-				{Name: req.Name, Kind: serviceImportKind, APIVersion: v1alpha1.GroupVersion.String()},
+				{
+					Name:       req.Name,
+					Kind:       serviceImportKind,
+					APIVersion: v1alpha1.GroupVersion.String(),
+					UID:        svcImport.UID,
+				},
 			},
 		},
 		Spec: v1.ServiceSpec{
 			Type:  v1.ServiceTypeClusterIP,
 			Ports: servicePorts(&svcImport),
 		},
+	}
+	if err := r.Client.Create(ctx, &svc); err != nil {
+		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }

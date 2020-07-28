@@ -67,10 +67,10 @@ type ServiceImportSpec struct {
 	// Ignored when type is Headless
 	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#virtual-ips-and-service-proxies
 	// +optional
-	SessionAffinity v1.ServiceAffinity `json:"sessionAffinity"`
+	SessionAffinity v1.ServiceAffinity `json:"sessionAffinity,omitempty"`
 	// sessionAffinityConfig contains session affinity configuration.
 	// +optional
-	SessionAffinityConfig *v1.SessionAffinityConfig `json:"sessionAffinityConfig"`
+	SessionAffinityConfig *v1.SessionAffinityConfig `json:"sessionAffinityConfig,omitempty"`
 }
 
 // ServicePort represents the port on which the service is exposed
@@ -111,7 +111,7 @@ type ServiceImportStatus struct {
 	// +patchMergeKey=cluster
 	// +listType=map
 	// +listMapKey=cluster
-	Clusters []ClusterStatus `json:"clusters"`
+	Clusters []ClusterStatus `json:"clusters,omitempty"`
 }
 
 // ClusterStatus contains service configuration mapped to a specific source cluster

@@ -18,7 +18,8 @@ package controllers
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
+	"encoding/base32"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -28,7 +29,9 @@ const (
 	serviceImportKind        = "ServiceImport"
 )
 
+var onlyPortName = "onlyport"
+
 func derivedName(name types.NamespacedName) string {
 	hash := sha256.New()
-	return "import-" + base64.RawURLEncoding.EncodeToString(hash.Sum([]byte(name.String())))[:10]
+	return "import-" + strings.ToLower(base32.HexEncoding.EncodeToString(hash.Sum([]byte(name.String())))[:10])
 }
