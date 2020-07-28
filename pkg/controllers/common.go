@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	derivedServiceAnnotation = "multicluster.kubernetes.io/derived-service"
+	DerivedServiceAnnotation = "multicluster.kubernetes.io/derived-service"
 	serviceImportKind        = "ServiceImport"
 )
 

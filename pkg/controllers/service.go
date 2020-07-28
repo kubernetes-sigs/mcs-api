@@ -53,7 +53,7 @@ func (r *ServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	r.Log.WithValues("service", req.NamespacedName)
 	var service v1.Service
 	if err := r.Client.Get(ctx, req.NamespacedName, &service); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	if service.DeletionTimestamp != nil {
 		return ctrl.Result{}, nil

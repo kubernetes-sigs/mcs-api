@@ -18,7 +18,11 @@ TOP := $(dir $(firstword $(MAKEFILE_LIST)))
 # ROOT is the root of the mkdocs tree.
 ROOT := $(abspath $(TOP))
 
-all: controller generate verify
+all: controller generate verify e2e-test
+
+.PHONY: e2e-test
+e2e-test: docker-build
+	go test ./test -v -up ../demo/up.sh -down ../demo/down.sh
 
 # Build manager binary and run static analysis.
 .PHONY: controller
@@ -36,6 +40,11 @@ generate:
 .PHONY: manifests
 manifests:
 	$(MAKE) -f kubebuilder.mk manifests
+
+# Generate manifests e.g. CRD, RBAC etc.
+.PHONY: docker-build
+docker-build:
+	$(MAKE) -f kubebuilder.mk docker-build
 
 # Install CRD's and example resources to a pre-existing cluster.
 .PHONY: install

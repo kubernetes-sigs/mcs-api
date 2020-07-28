@@ -27,7 +27,7 @@ c2=c2
 k1="kubectl --kubeconfig ${c1}.kubeconfig"
 k2="kubectl --kubeconfig ${c2}.kubeconfig"
 
-if [ -z "$(docker images mcs-api-controller -q)" ]; then
+if [ ! -z "${BUILD_CONTROLLER}" ] || [ -z "$(docker images mcs-api-controller -q)" ]; then
   pushd ../
   make -f kubebuilder.mk docker-build
   popd

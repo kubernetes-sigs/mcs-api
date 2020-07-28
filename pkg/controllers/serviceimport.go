@@ -59,7 +59,7 @@ func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	r.Log.WithValues("serviceimport", req.NamespacedName, "derived", serviceName)
 	var svcImport v1alpha1.ServiceImport
 	if err := r.Client.Get(ctx, req.NamespacedName, &svcImport); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	if svcImport.DeletionTimestamp != nil {
 		return ctrl.Result{}, nil
@@ -70,14 +70,14 @@ func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	// Ensure the existence of the derived service
 	var svc v1.Service
 
-	if svcImport.Annotations[derivedServiceAnnotation] == "" {
-		svcImport.Annotations[derivedServiceAnnotation] = derivedName(req.NamespacedName)
+	if svcImport.Annotations[DerivedServiceAnnotation] == "" {
+		svcImport.Annotations[DerivedServiceAnnotation] = derivedName(req.NamespacedName)
 		if err := r.Client.Update(ctx, &svcImport); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
 	}
-	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: svcImport.Annotations[derivedServiceAnnotation]}, &svc); err == nil {
+	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: svcImport.Annotations[DerivedServiceAnnotation]}, &svc); err == nil {
 		return ctrl.Result{}, nil
 	} else if !apierrors.IsNotFound(err) {
 		return ctrl.Result{}, err
@@ -85,7 +85,7 @@ func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	svc = v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: req.Namespace,
-			Name:      svcImport.Annotations[derivedServiceAnnotation],
+			Name:      svcImport.Annotations[DerivedServiceAnnotation],
 			OwnerReferences: []metav1.OwnerReference{
 				{
 					Name:       req.Name,

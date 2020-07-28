@@ -43,7 +43,7 @@ func (r *EndpointSliceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 
 	var epSlice discoveryv1beta1.EndpointSlice
 	if err := r.Client.Get(ctx, req.NamespacedName, &epSlice); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	if epSlice.Labels[v1alpha1.LabelServiceName] == "" {
 		return ctrl.Result{}, nil

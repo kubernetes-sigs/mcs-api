@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/go-logr/logr v0.1.0
+	google.golang.org/appengine v1.5.0
 	k8s.io/api v0.18.4
 	k8s.io/apimachinery v0.18.4
 	k8s.io/client-go v0.18.4
