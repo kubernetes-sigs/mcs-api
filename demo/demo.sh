@@ -16,13 +16,15 @@
 
 cd $(dirname ${BASH_SOURCE})
 . ./udemo.sh
+. ../scripts/util.sh
 
 DEMO_AUTO_RUN=true
 
-c1=c1
-c2=c2
-k1="kubectl --kubeconfig ${c1}.kubeconfig"
-k2="kubectl --kubeconfig ${c2}.kubeconfig"
+kubeconfig1=${KUBECONFIG1:-../scripts/c1.kubeconfig}
+kubeconfig2=${KUBECONFIG2:-../scripts/c2.kubeconfig}
+
+k1="kubectl --kubeconfig ${kubeconfig1}"
+k2="kubectl --kubeconfig ${kubeconfig2}"
 
 desc "Setup our demo namespace"
 run "${k1} create ns demo"
@@ -47,7 +49,7 @@ run "${k1} get endpointslice -n demo"
 
 
 desc "Lets look at some requests to the service in cluster 1"
-run "${k1} -n demo run -i --rm --restart=Never --image=jeremyot/request request -- --duration=5s --address=serve.demo.svc.cluster.local"
+run "${k1} -n demo run -i --rm --restart=Never --image=jeremyot/request:0a40de8 request -- --duration=5s --address=serve.demo.svc.cluster.local"
 
 desc "Ok, looks normal. Let's import the service from our other cluster"
 ep_1=$(${k1} get endpointslice -n demo -l 'kubernetes.io/service-name=serve' --template="{{(index .items 0).metadata.name}}")
@@ -63,16 +65,19 @@ run "${k1} get -n demo endpointslice"
 run "${k1} get -n demo service"
 
 function import_ip() {
-    ${k1} get serviceimport -n demo -o go-template --template='{{(index .items 0).spec.ip}}'
+    ${k1} get serviceimport -n demo -o go-template --template='{{index (index .items 0).spec.ips 0}}'
 }
 
 waitfor import_ip
 
 vip=$(${k1} get serviceimport -n demo -o go-template --template='{{index (index .items 0).spec.ips 0}}')
 desc "Now grap the multi-cluster VIP from the serviceimport..."
-run "${k1} get serviceimport -n demo -o go-template --template='{{(index (index .items 0).spec.ips 0}}{{\"\n\"}}'"
+run "${k1} get serviceimport -n demo -o go-template --template='{{index (index .items 0).spec.ips 0}}{{\"\n\"}}'"
 desc "...and connect to it"
-run "${k1} -n demo run -i --rm --restart=Never --image=jeremyot/request request -- --duration=10s --address=${vip}"
+run "${k1} -n demo run -i --rm --restart=Never --image=jeremyot/request:0a40de8 request -- --duration=10s --address=${vip}"
 desc "We have a multi-cluster service!"
+desc "See for yourself"
+desc "Cluster 1: ${kubeconfig1}"
+desc "Cluster 2: ${kubeconfig2}"
 desc "(Enter to exit)"
 read -s

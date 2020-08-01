@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 	"sigs.k8s.io/mcs-api/pkg/controllers"
-	// +kubebuilder:scaffold:imports
 )
 
 var (
@@ -38,7 +37,6 @@ var (
 func init() {
 	clientgoscheme.AddToScheme(scheme)
 	v1alpha1.AddToScheme(scheme)
-	// +kubebuilder:scaffold:scheme
 }
 
 func main() {
@@ -48,46 +46,16 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 	flag.Parse()
-
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
-
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	opts := ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		LeaderElection:     enableLeaderElection,
 		Port:               9443,
-	})
-	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
 	}
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
-	if err = (&controllers.ServiceImportReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("ServiceImport"),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ServiceImport")
-		os.Exit(1)
-	}
-	if err = (&controllers.ServiceReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Service"),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Service")
-		os.Exit(1)
-	}
-	if err = (&controllers.EndpointSliceReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("EndpointSlice"),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "EndpointSlice")
-		os.Exit(1)
-	}
-	// +kubebuilder:scaffold:builder
-
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
+	if err := controllers.Start(ctrl.GetConfigOrDie(), setupLog, opts, ctrl.SetupSignalHandler()); err != nil {
+		setupLog.Error(err, "problem running controllers")
 		os.Exit(1)
 	}
 }

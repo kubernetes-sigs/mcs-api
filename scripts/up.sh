@@ -16,7 +16,7 @@
 
 cd $(dirname ${BASH_SOURCE})
 
-. ./udemo.sh
+. ./util.sh
 
 set -e
 set -x
@@ -33,8 +33,8 @@ if [ ! -z "${BUILD_CONTROLLER}" ] || [ -z "$(docker images mcs-api-controller -q
   popd
 fi
 
-kind create cluster --name "${c1}" --config "yaml/${c1}.yaml"
-kind create cluster --name "${c2}" --config "yaml/${c2}.yaml"
+kind create cluster --name "${c1}" --config "${c1}.yaml"
+kind create cluster --name "${c2}" --config "${c2}.yaml"
 
 kind get kubeconfig --name "${c1}" > "${c1}".kubeconfig
 kind get kubeconfig --name "${c2}" > "${c2}".kubeconfig

@@ -35,17 +35,27 @@ type EndpointSliceReconciler struct {
 
 // +kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch;update;patch
 
+func shouldIgnoreEndpointSlice(epSlice *discoveryv1beta1.EndpointSlice) bool {
+	if epSlice.DeletionTimestamp != nil {
+		return true
+	}
+	if epSlice.Labels[v1alpha1.LabelServiceName] == "" {
+		return true
+	}
+	return false
+}
+
 // Reconcile the changes.
 func (r *EndpointSliceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	r.Log.WithValues("endpointslice", req.NamespacedName)
+	log := r.Log.WithValues("endpointslice", req.NamespacedName)
 
 	var epSlice discoveryv1beta1.EndpointSlice
 	if err := r.Client.Get(ctx, req.NamespacedName, &epSlice); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	if epSlice.Labels[v1alpha1.LabelServiceName] == "" {
+	if shouldIgnoreEndpointSlice(&epSlice) {
 		return ctrl.Result{}, nil
 	}
 	// Ensure the EndpointSlice is labelled to match the ServiceImport's derived
@@ -58,6 +68,7 @@ func (r *EndpointSliceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	if err := r.Client.Update(ctx, &epSlice); err != nil {
 		return ctrl.Result{}, err
 	}
+	log.Info("added label", discoveryv1beta1.LabelServiceName, serviceName)
 	return ctrl.Result{}, nil
 }
 

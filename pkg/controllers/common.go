@@ -19,9 +19,13 @@ package controllers
 import (
 	"crypto/sha256"
 	"encoding/base32"
+	"os"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 const (
@@ -33,5 +37,44 @@ const (
 
 func derivedName(name types.NamespacedName) string {
 	hash := sha256.New()
-	return "import-" + strings.ToLower(base32.HexEncoding.EncodeToString(hash.Sum([]byte(name.String())))[:10])
+	hash.Write([]byte(name.String()))
+	return "derived-" + strings.ToLower(base32.HexEncoding.WithPadding(base32.NoPadding).EncodeToString(hash.Sum(nil)))[:10]
+}
+
+// Start the controllers with the supplied config
+func Start(cfg *rest.Config, setupLog logr.Logger, opts ctrl.Options, stopCh <-chan struct{}) error {
+	mgr, err := ctrl.NewManager(cfg, opts)
+	if err != nil {
+		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+
+	if err = (&ServiceImportReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("ServiceImport"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ServiceImport")
+		return err
+	}
+	if err = (&ServiceReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Service"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Service")
+		return err
+	}
+	if err = (&EndpointSliceReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("EndpointSlice"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "EndpointSlice")
+		return err
+	}
+
+	setupLog.Info("starting manager")
+	if err := mgr.Start(stopCh); err != nil {
+		setupLog.Error(err, "problem running manager")
+		return err
+	}
+	return nil
 }

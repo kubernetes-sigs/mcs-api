@@ -14,9 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -o errexit
-set -o nounset
-set -o pipefail
-
-# Install all example mcs-api resources.
-kubectl apply -f examples
+function waitfor() {
+  for i in {1..30}; do
+    if [ ! -z "$(${@})" ]; then
+      break
+    fi
+    sleep 1
+  done
+  if [ -z "$(${@})" ]; then
+    echo "No results for '${1}' after 30 attempts"
+  fi
+}

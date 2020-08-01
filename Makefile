@@ -17,49 +17,62 @@ DOCKER ?= docker
 TOP := $(dir $(firstword $(MAKEFILE_LIST)))
 # ROOT is the root of the mkdocs tree.
 ROOT := $(abspath $(TOP))
+# Image URL to use all building/pushing image targets
+IMG ?= mcs-api-controller:latest
+# Need v1 to support defaults in CRDs, unfortunately limiting us to k8s 1.16+
+CRD_OPTIONS ?= "crd:crdVersions=v1"
 
+CONTROLLER_GEN=go run sigs.k8s.io/controller-tools/cmd/controller-gen
+# enable Go modules
+export GO111MODULE=on
+
+.PHONY: all
 all: controller generate verify
 
 .PHONY: e2e-test
 e2e-test: docker-build
-	go test -v ./test -up ../demo/up.sh -down ../demo/down.sh
+	go test -v ./test -up ../scripts/up.sh -down ../scripts/down.sh
 
 .PHONY: demo
 demo: docker-build
-	./demo/up.sh
+	./scripts/up.sh
 	./demo/demo.sh
-	./demo/down.sh
+	./scripts/down.sh
 
-# Build manager binary and run static analysis.
+# Build controller binary
 .PHONY: controller
-controller:
-	$(MAKE) -f kubebuilder.mk manager
+controller: generate fmt vet
+	go build -o bin/manager cmd/servicecontroller/servicecontroller.go
+
+# Run go fmt against code
+.PHONY: fmt
+fmt:
+	go fmt ./...
+
+# Run go vet against code
+.PHONY: vet
+vet:
+	go vet ./...
 
 # Run generators for Deepcopy funcs and CRDs
 .PHONY: generate
 generate:
 	./hack/update-codegen.sh
-	$(MAKE) -f kubebuilder.mk generate
-	$(MAKE) manifests
+	$(CONTROLLER_GEN) object:headerFile=./hack/boilerplate.go.txt paths="./..."
 
 # Generate manifests e.g. CRD, RBAC etc.
 .PHONY: manifests
 manifests:
-	$(MAKE) -f kubebuilder.mk manifests
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=mcs-derived-service-manager webhook schemapatch:manifests="config/crd-base" paths="./..." output:crd:none output:schemapatch:dir="config/crd"
 
-# Generate manifests e.g. CRD, RBAC etc.
-.PHONY: generate docker-build
-docker-build:
-	$(MAKE) -f kubebuilder.mk docker-build
+# Run tests
+.PHONY: test
+test: generate fmt vet manifests
+	go test ./pkg/... -coverprofile cover.out
 
 # Install CRD's and example resources to a pre-existing cluster.
 .PHONY: install
 install: manifests crd
-
-# Install the CRD's to a pre-existing cluster.
-.PHONY: crd
-crd:
-	$(MAKE) -f kubebuilder.mk install
 
 # Remove installed CRD's and CR's.
 .PHONY: uninstall
@@ -70,3 +83,17 @@ uninstall:
 .PHONY: verify
 verify:
 	./hack/verify-all.sh
+
+# Build docker containers
+.PHONY: test
+docker-build:
+	docker build . -t ${IMG}
+
+# Push the docker image
+.PHONY: docker-push
+docker-push: docker-build
+	docker push ${IMG}
+
+# Run against the configured Kubernetes cluster in ~/.kube/config
+run: generate fmt vet manifests
+	go run ./cmd/servicecontroller/servicecontroller.go

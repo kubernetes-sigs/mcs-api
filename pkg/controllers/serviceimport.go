@@ -50,30 +50,41 @@ func servicePorts(svcImport *v1alpha1.ServiceImport) []v1.ServicePort {
 	return ports
 }
 
+func shouldIgnoreImport(svcImport *v1alpha1.ServiceImport) bool {
+	if svcImport.DeletionTimestamp != nil {
+		return true
+	}
+	if svcImport.Spec.Type != v1alpha1.SuperclusterIP {
+		return true
+	}
+	return false
+}
+
 // Reconcile the changes.
 func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	serviceName := derivedName(req.NamespacedName)
-	r.Log.WithValues("serviceimport", req.NamespacedName, "derived", serviceName)
+	log := r.Log.WithValues("serviceimport", req.NamespacedName, "derived", serviceName)
 	var svcImport v1alpha1.ServiceImport
 	if err := r.Client.Get(ctx, req.NamespacedName, &svcImport); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	if svcImport.DeletionTimestamp != nil {
+	if shouldIgnoreImport(&svcImport) {
 		return ctrl.Result{}, nil
 	}
-	if svcImport.Spec.Type != v1alpha1.SuperclusterIP {
-		return ctrl.Result{}, nil
-	}
+
 	// Ensure the existence of the derived service
 	var svc v1.Service
-
 	if svcImport.Annotations[DerivedServiceAnnotation] == "" {
+		if svcImport.Annotations == nil {
+			svcImport.Annotations = map[string]string{}
+		}
 		svcImport.Annotations[DerivedServiceAnnotation] = derivedName(req.NamespacedName)
 		if err := r.Client.Update(ctx, &svcImport); err != nil {
 			return ctrl.Result{}, err
 		}
+		log.Info("added annotation", DerivedServiceAnnotation, svcImport.Annotations[DerivedServiceAnnotation])
 		return ctrl.Result{}, nil
 	}
 	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: svcImport.Annotations[DerivedServiceAnnotation]}, &svc); err == nil {
@@ -102,6 +113,7 @@ func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	if err := r.Client.Create(ctx, &svc); err != nil {
 		return ctrl.Result{}, err
 	}
+	log.Info("created service")
 	return ctrl.Result{}, nil
 }
 

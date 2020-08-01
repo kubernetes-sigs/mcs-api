@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: serve
-        image: jeremyot/serve
+        image: jeremyot/serve:0a40de8
         args:
         - "--message='hello from cluster 2 (Node: {{env \"NODE_NAME\"}} Pod: {{env \"POD_NAME\"}} Address: {{addr}})'"
         env:

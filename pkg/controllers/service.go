@@ -49,7 +49,7 @@ func serviceImportOwner(refs []metav1.OwnerReference) string {
 func (r *ServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	r.Log.WithValues("service", req.NamespacedName)
+	log := r.Log.WithValues("service", req.NamespacedName)
 	var service v1.Service
 	if err := r.Client.Get(ctx, req.NamespacedName, &service); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -72,6 +72,7 @@ func (r *ServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if err := r.Client.Update(ctx, &svcImport); err != nil {
 		return ctrl.Result{}, err
 	}
+	log.Info("updated serviceimport ip", "ip", service.Spec.ClusterIP)
 	return ctrl.Result{}, nil
 }
 
