@@ -35,7 +35,7 @@ e2e-test: export KUBECONFIG2 != mktemp --suffix=".kubeconfig"
 e2e-test: export MCS_CONTROLLER_IMAGE := $(IMG)
 e2e-test: docker-build
 	./scripts/up.sh
-	go test ./e2etest
+	go test ./e2etest --count=1
 	./scripts/down.sh
 	rm $(KUBECONFIG1)
 	rm $(KUBECONFIG2)

@@ -31,16 +31,13 @@ run "${k1} create ns demo"
 run "${k2} create ns demo"
 
 c1_pane=`tmux split-window -h -d -P`
-c2_pane=`tmux split-window -v -d -P -t $c1_pane`
 
 function cleanup() {
-    tmux kill-pane -t $c2_pane
     tmux kill-pane -t $c1_pane
 }
 trap cleanup EXIT
 
 tmux send -t $c1_pane "${k1} logs -f mcs-api-controller" Enter
-tmux send -t $c2_pane "${k2} logs -f mcs-api-controller" Enter
 
 desc "Create our service in each cluster"
 run "${k1} apply -f yaml/dep1.yaml -f yaml/svc.yaml"
