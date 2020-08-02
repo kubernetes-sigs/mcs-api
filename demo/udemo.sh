@@ -19,18 +19,6 @@ readonly yellow=$(tput bold; tput setaf 3)
 readonly   blue=$(tput bold; tput setaf 6)
 readonly timeout=$(if [ "$(uname)" == "Darwin" ]; then echo "1"; else echo "0.1"; fi) 
 
-function waitfor() {
-  for i in {1..30}; do
-    if [ ! -z "$(${@})" ]; then
-      break
-    fi
-    sleep 1
-  done
-  if [ -z "$(${@})" ]; then
-    echo "No results for '${1}' after 30 attempts"
-  fi
-}
-
 function desc() {
     maybe_first_prompt
     echo "$blue# $@$reset"

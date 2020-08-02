@@ -30,10 +30,18 @@ export GO111MODULE=on
 all: controller generate verify
 
 .PHONY: e2e-test
+e2e-test: export KUBECONFIG1 != mktemp --suffix=".kubeconfig"
+e2e-test: export KUBECONFIG2 != mktemp --suffix=".kubeconfig"
+e2e-test: export MCS_CONTROLLER_IMAGE := $(IMG)
 e2e-test: docker-build
-	go test -v ./test -up ../scripts/up.sh -down ../scripts/down.sh
+	./scripts/up.sh
+	go test ./e2etest
+	./scripts/down.sh
+	rm $(KUBECONFIG1)
+	rm $(KUBECONFIG2)
 
 .PHONY: demo
+demo: export MCS_CONTROLLER_IMAGE := $(IMG)
 demo: docker-build
 	./scripts/up.sh
 	./demo/demo.sh
@@ -85,8 +93,8 @@ verify:
 	./hack/verify-all.sh
 
 # Build docker containers
-.PHONY: test
-docker-build:
+.PHONY: docker-build
+docker-build: generate fmt vet manifests
 	docker build . -t ${IMG}
 
 # Push the docker image

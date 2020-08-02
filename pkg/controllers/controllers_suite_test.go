@@ -22,6 +22,7 @@ import (
 	"math/rand"
 	"path/filepath"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -55,12 +56,11 @@ var (
 )
 
 var _ = BeforeSuite(func(done Done) {
-	var err error
+	rand.Seed(GinkgoRandomSeed())
 	log.SetLogger(zap.LoggerTo(GinkgoWriter, true))
 	// Use Kind for a more up-to-date K8s
 	clusterProvider = cluster.NewProvider()
 	Expect(clusterProvider.Create(clusterName)).To(Succeed())
-	Expect(err).ToNot(HaveOccurred())
 	kubeconfig, err := clusterProvider.KubeConfig(clusterName, false)
 	Expect(err).ToNot(HaveOccurred())
 
@@ -84,7 +84,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(k8s).ToNot(BeNil())
 
-	testNS = fmt.Sprintf("test-%v", rand.Uint64())
+	testNS = fmt.Sprintf("test-%v", time.Now().Unix())
 	Expect(k8s.Create(context.Background(), &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testNS,

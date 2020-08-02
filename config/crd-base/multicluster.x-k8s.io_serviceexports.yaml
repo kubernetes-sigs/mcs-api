@@ -22,6 +22,10 @@ spec:
   - name: v1alpha1
     served: true
     storage: true
+    additionalPrinterColumns:
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
   names:
     plural: serviceexports
     singular: serviceexport

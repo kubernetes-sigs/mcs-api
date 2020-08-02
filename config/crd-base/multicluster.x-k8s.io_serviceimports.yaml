@@ -29,7 +29,10 @@ spec:
     - name: IP
       type: string
       description: The VIP for this ServiceImport
-      jsonPath: .spec.ip
+      jsonPath: .spec.ips
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
   scope: Namespaced
   names:
     plural: serviceimports
