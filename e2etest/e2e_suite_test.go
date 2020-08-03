@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"strconv"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -35,10 +36,15 @@ import (
 var (
 	kubeconfig1 = flag.String("kubeconfig1", os.Getenv("KUBECONFIG1"), "The path to a kubeconfig for cluster 1")
 	kubeconfig2 = flag.String("kubeconfig2", os.Getenv("KUBECONFIG2"), "The path to a kubeconfig for cluster 2")
-
-	cluster1 clusterClients
-	cluster2 clusterClients
+	noTearDown  = flag.Bool("no-tear-down", tryParseBool(os.Getenv("NO_TEAR_DOWN")), "Don't tear down after test (useful for debugging failures).")
+	cluster1    clusterClients
+	cluster2    clusterClients
 )
+
+func tryParseBool(s string) bool {
+	b, _ := strconv.ParseBool(s)
+	return b
+}
 
 type clusterClients struct {
 	k8s kubernetes.Interface

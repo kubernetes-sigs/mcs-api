@@ -30,15 +30,9 @@ export GO111MODULE=on
 all: controller generate verify
 
 .PHONY: e2e-test
-e2e-test: export KUBECONFIG1 != mktemp --suffix=".kubeconfig"
-e2e-test: export KUBECONFIG2 != mktemp --suffix=".kubeconfig"
 e2e-test: export MCS_CONTROLLER_IMAGE := $(IMG)
 e2e-test: docker-build
-	./scripts/up.sh
-	go test ./e2etest --count=1
-	./scripts/down.sh
-	rm $(KUBECONFIG1)
-	rm $(KUBECONFIG2)
+	./scripts/e2e-test.sh
 
 .PHONY: demo
 demo: export MCS_CONTROLLER_IMAGE := $(IMG)
