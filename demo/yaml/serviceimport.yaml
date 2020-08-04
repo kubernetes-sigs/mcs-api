@@ -4,7 +4,7 @@ metadata:
   name: serve
   namespace: demo
 spec:
-  type: SuperclusterIP
+  type: ClusterSetIP
   ports:
   - port: 80
     protocol: TCP

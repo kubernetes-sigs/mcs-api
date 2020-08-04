@@ -24,7 +24,7 @@ import (
 // +genclient
 // +kubebuilder:object:root=true
 
-// ServiceImport describes a service imported from clusters in a supercluster.
+// ServiceImport describes a service imported from clusters in a ClusterSet.
 type ServiceImport struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
@@ -42,8 +42,8 @@ type ServiceImport struct {
 type ServiceImportType string
 
 const (
-	// SuperclusterIP are only accessible via the Supercluster IP.
-	SuperclusterIP ServiceImportType = "SuperclusterIP"
+	// ClusterSetIP are only accessible via the ClusterSet IP.
+	ClusterSetIP ServiceImportType = "ClusterSetIP"
 	// Headless services allow backend pods to be addressed directly.
 	Headless ServiceImportType = "Headless"
 )
@@ -52,13 +52,13 @@ const (
 type ServiceImportSpec struct {
 	// +listType=atomic
 	Ports []ServicePort `json:"ports"`
-	// ip will be used as the VIP for this service when type is SuperclusteriP.
+	// ip will be used as the VIP for this service when type is ClusterSetIP.
 	// +kubebuilder:validation:MaxItems:=1
 	// +optional
 	IPs []string `json:"ips,omitempty"`
 	// type defines the type of this service.
-	// Must be SuperclusterIP or Headless.
-	// +kubebuilder:validation:Enum=SuperclusterIP;Headless
+	// Must be ClusterSetIP or Headless.
+	// +kubebuilder:validation:Enum=ClusterSetIP;Headless
 	Type ServiceImportType `json:"type"`
 	// Supports "ClientIP" and "None". Used to maintain session affinity.
 	// Enable client IP based session affinity.

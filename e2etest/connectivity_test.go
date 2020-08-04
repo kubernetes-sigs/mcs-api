@@ -60,7 +60,7 @@ var (
 			Name: "hello",
 		},
 		Spec: v1alpha1.ServiceImportSpec{
-			Type: v1alpha1.SuperclusterIP,
+			Type: v1alpha1.ClusterSetIP,
 			Ports: []v1alpha1.ServicePort{
 				{
 					Name:     "tcp",

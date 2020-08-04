@@ -60,7 +60,7 @@ var _ = Describe("ServiceImport", func() {
 					DeletionTimestamp: &metav1.Time{Time: time.Now()},
 				},
 				Spec: v1alpha1.ServiceImportSpec{
-					Type: v1alpha1.SuperclusterIP,
+					Type: v1alpha1.ClusterSetIP,
 					Ports: []v1alpha1.ServicePort{
 						{Port: 80},
 					},
@@ -78,7 +78,7 @@ var _ = Describe("ServiceImport", func() {
 					Name:      serviceName.Name,
 				},
 				Spec: v1alpha1.ServiceImportSpec{
-					Type: v1alpha1.SuperclusterIP,
+					Type: v1alpha1.ClusterSetIP,
 					Ports: []v1alpha1.ServicePort{
 						{Port: 80},
 					},
@@ -134,7 +134,7 @@ var _ = Describe("ServiceImport", func() {
 					Name:      serviceName.Name,
 				},
 				Spec: v1alpha1.ServiceImportSpec{
-					Type: v1alpha1.SuperclusterIP,
+					Type: v1alpha1.ClusterSetIP,
 					Ports: []v1alpha1.ServicePort{
 						{Port: 80},
 					},

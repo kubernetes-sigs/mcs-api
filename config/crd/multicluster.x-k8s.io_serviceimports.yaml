@@ -45,7 +45,7 @@ spec:
     "schema":
       "openAPIV3Schema":
         description: ServiceImport describes a service imported from clusters in a
-          supercluster.
+          ClusterSet.
         type: object
         properties:
           apiVersion:
@@ -69,7 +69,7 @@ spec:
             properties:
               ips:
                 description: ip will be used as the VIP for this service when type
-                  is SuperclusteriP.
+                  is ClusterSetIP.
                 type: array
                 maxItems: 1
                 items:
@@ -130,11 +130,11 @@ spec:
                         type: integer
                         format: int32
               type:
-                description: type defines the type of this service. Must be SuperclusterIP
+                description: type defines the type of this service. Must be ClusterSetIP
                   or Headless.
                 type: string
                 enum:
-                - SuperclusterIP
+                - ClusterSetIP
                 - Headless
           status:
             description: status contains information about the exported services that

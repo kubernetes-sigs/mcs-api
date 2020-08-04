@@ -54,7 +54,7 @@ func shouldIgnoreImport(svcImport *v1alpha1.ServiceImport) bool {
 	if svcImport.DeletionTimestamp != nil {
 		return true
 	}
-	if svcImport.Spec.Type != v1alpha1.SuperclusterIP {
+	if svcImport.Spec.Type != v1alpha1.ClusterSetIP {
 		return true
 	}
 	return false
