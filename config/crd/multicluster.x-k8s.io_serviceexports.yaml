@@ -18,10 +18,18 @@ metadata:
 spec:
   group: multicluster.x-k8s.io
   scope: Namespaced
+  names:
+    plural: serviceexports
+    singular: serviceexport
+    kind: ServiceExport
+    shortNames:
+    - svcex
   versions:
   - name: v1alpha1
     served: true
     storage: true
+    subresources:
+      status: {}
     additionalPrinterColumns:
     - name: Age
       type: date
@@ -72,6 +80,10 @@ spec:
                     status:
                       description: Status is one of {"True", "False", "Unknown"}
                       type: string
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
                     type:
                       description: ServiceExportConditionType identifies a specific
                         condition.
@@ -79,9 +91,3 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
-  names:
-    plural: serviceexports
-    singular: serviceexport
-    kind: ServiceExport
-    shortNames:
-    - svcex

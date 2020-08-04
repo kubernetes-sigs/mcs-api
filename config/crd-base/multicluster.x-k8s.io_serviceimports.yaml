@@ -17,10 +17,19 @@ metadata:
   name: serviceimports.multicluster.x-k8s.io
 spec:
   group: multicluster.x-k8s.io
+  scope: Namespaced
+  names:
+    plural: serviceimports
+    singular: serviceimport
+    kind: ServiceImport
+    shortNames:
+    - svcim
   versions:
   - name: v1alpha1
     served: true
     storage: true
+    subresources:
+      status: {}
     additionalPrinterColumns:
     - name: Type
       type: string
@@ -33,10 +42,3 @@ spec:
     - name: Age
       type: date
       jsonPath: .metadata.creationTimestamp
-  scope: Namespaced
-  names:
-    plural: serviceimports
-    singular: serviceimport
-    kind: ServiceImport
-    shortNames:
-    - svcim

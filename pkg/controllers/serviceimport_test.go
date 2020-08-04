@@ -111,6 +111,18 @@ var _ = Describe("ServiceImport", func() {
 			Expect(len(s.OwnerReferences)).To(Equal(1))
 			Expect(s.OwnerReferences[0].UID).To(Equal(serviceImport.UID))
 		}, 15)
+		It("removes derived service", func() {
+			var s v1.Service
+			Eventually(func() error {
+				return k8s.Get(ctx, derivedServiceName, &s)
+			}, 10).Should(Succeed())
+			var imp v1alpha1.ServiceImport
+			Expect(k8s.Get(ctx, serviceName, &imp)).To(Succeed())
+			Expect(k8s.Delete(ctx, &imp)).To(Succeed())
+			Eventually(func() error {
+				return k8s.Get(ctx, derivedServiceName, &s)
+			}, 15).ShouldNot(Succeed())
+		}, 15)
 	})
 	Context("created with IP", func() {
 		BeforeEach(func() {

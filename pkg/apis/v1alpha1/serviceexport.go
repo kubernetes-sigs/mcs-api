@@ -74,6 +74,7 @@ const (
 type ServiceExportCondition struct {
 	Type ServiceExportConditionType `json:"type"`
 	// Status is one of {"True", "False", "Unknown"}
+	// +kubebuilder:validation:Enum=True;False;Unknown
 	Status v1.ConditionStatus `json:"status"`
 	// +optional
 	LastTransitionTime *metav1.Time `json:"lastTransitionTime,omitempty"`

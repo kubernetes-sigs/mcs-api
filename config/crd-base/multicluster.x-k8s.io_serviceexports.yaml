@@ -18,17 +18,19 @@ metadata:
 spec:
   group: multicluster.x-k8s.io
   scope: Namespaced
-  versions:
-  - name: v1alpha1
-    served: true
-    storage: true
-    additionalPrinterColumns:
-    - name: Age
-      type: date
-      jsonPath: .metadata.creationTimestamp
   names:
     plural: serviceexports
     singular: serviceexport
     kind: ServiceExport
     shortNames:
     - svcex
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp

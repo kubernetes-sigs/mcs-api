@@ -27,7 +27,7 @@ CONTROLLER_GEN=go run sigs.k8s.io/controller-tools/cmd/controller-gen
 export GO111MODULE=on
 
 .PHONY: all
-all: controller generate verify
+all: generate manifests controller verify
 
 .PHONY: e2e-test
 e2e-test: export MCS_CONTROLLER_IMAGE := $(IMG)

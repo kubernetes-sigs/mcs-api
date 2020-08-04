@@ -58,7 +58,6 @@ type ServiceImportSpec struct {
 	IPs []string `json:"ips,omitempty"`
 	// type defines the type of this service.
 	// Must be SuperclusterIP or Headless.
-	// +required
 	// +kubebuilder:validation:Enum=SuperclusterIP;Headless
 	Type ServiceImportType `json:"type"`
 	// Supports "ClientIP" and "None". Used to maintain session affinity.
