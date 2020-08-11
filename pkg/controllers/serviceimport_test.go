@@ -138,7 +138,6 @@ var _ = Describe("ServiceImport", func() {
 					Ports: []v1alpha1.ServicePort{
 						{Port: 80},
 					},
-					IPs: []string{"10.42.42.42"},
 				},
 			}
 			Expect(k8s.Create(ctx, &serviceImport)).To(Succeed())
@@ -156,6 +155,40 @@ var _ = Describe("ServiceImport", func() {
 				}
 				return ""
 			}, 10).Should(Equal(s.Spec.ClusterIP))
+		}, 15)
+	})
+	Context("created with existing clustersetIP", func() {
+		BeforeEach(func() {
+			serviceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("svc-%v", rand.Uint64())}
+			derivedServiceName = types.NamespacedName{Namespace: testNS, Name: derivedName(serviceName)}
+			serviceImport = v1alpha1.ServiceImport{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testNS,
+					Name:      serviceName.Name,
+				},
+				Spec: v1alpha1.ServiceImportSpec{
+					Type: v1alpha1.ClusterSetIP,
+					Ports: []v1alpha1.ServicePort{
+						{Port: 80},
+					},
+					IPs: []string{"10.42.42.42"},
+				},
+			}
+			Expect(k8s.Create(ctx, &serviceImport)).To(Succeed())
+		})
+		It("updates service loadbalancer status with service import IPs", func() {
+			var svcImport v1alpha1.ServiceImport
+			var s v1.Service
+			Eventually(func() error {
+				return k8s.Get(ctx, derivedServiceName, &s)
+			}, 10).Should(Succeed())
+			Eventually(func() string {
+				Expect(k8s.Get(ctx, serviceName, &svcImport)).To(Succeed())
+				if len(svcImport.Spec.IPs) > 0 {
+					return svcImport.Spec.IPs[0]
+				}
+				return ""
+			}, 10).Should(Equal(s.Status.LoadBalancer.Ingress[0].IP))
 		}, 15)
 	})
 })

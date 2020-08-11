@@ -65,9 +65,11 @@ func (r *ServiceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: importName}, &svcImport); err != nil {
 		return ctrl.Result{}, err
 	}
-	if len(svcImport.Spec.IPs) == 1 && svcImport.Spec.IPs[0] == service.Spec.ClusterIP {
+
+	if len(svcImport.Spec.IPs) > 0 {
 		return ctrl.Result{}, nil
 	}
+
 	svcImport.Spec.IPs = []string{service.Spec.ClusterIP}
 	if err := r.Client.Update(ctx, &svcImport); err != nil {
 		return ctrl.Result{}, err
