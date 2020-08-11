@@ -1,0 +1,12 @@
+apiVersion: multicluster.x-k8s.io/v1alpha1
+kind: ServiceImport
+metadata:
+  name: serve-with-vip
+  namespace: demo
+spec:
+  type: ClusterSetIP
+  ips:
+  - 1.2.3.4
+  ports:
+  - port: 80
+    protocol: TCP

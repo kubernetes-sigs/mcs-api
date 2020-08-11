@@ -55,6 +55,8 @@ run "${k1} get endpointslice -n demo ${ep_1} -o yaml | ./edit-meta --metadata '{
 run "${k2} get endpointslice -n demo ${ep_2} -o yaml | ./edit-meta --metadata '{name: imported-${ep_2}, namespace: demo, labels: {multicluster.kubernetes.io/service-name: serve}}' > yaml/slice-2.tmp"
 run "${k1} apply -f yaml/serviceimport.yaml -f yaml/slice-1.tmp -f yaml/slice-2.tmp"
 run "${k2} apply -f yaml/serviceimport.yaml -f yaml/slice-1.tmp -f yaml/slice-2.tmp"
+run "${k1} apply -f yaml/serviceimport-with-vip.yaml -f yaml/slice-1.tmp -f yaml/slice-2.tmp"
+run "${k2} apply -f yaml/serviceimport-with-vip.yaml -f yaml/slice-1.tmp -f yaml/slice-2.tmp"
 
 desc "See what we've created..."
 run "${k1} get -n demo serviceimports"
