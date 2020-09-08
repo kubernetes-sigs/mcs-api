@@ -60,6 +60,9 @@ func shouldIgnoreImport(svcImport *v1alpha1.ServiceImport) bool {
 	return false
 }
 
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=core,resources=services/status,verbs=get;list;watch;create;update;patch
+
 // Reconcile the changes.
 func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -92,6 +95,7 @@ func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	} else if !apierrors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
+
 	svc = v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: req.Namespace,
@@ -114,6 +118,29 @@ func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 		return ctrl.Result{}, err
 	}
 	log.Info("created service")
+
+	if len(svcImport.Spec.IPs) == 0 {
+		return ctrl.Result{}, nil
+	}
+
+	// update loadbalanacer status with provided clustersetIPs
+	ingress := []v1.LoadBalancerIngress{}
+	for _, ip := range svcImport.Spec.IPs {
+		ingress = append(ingress, v1.LoadBalancerIngress{
+			IP: ip,
+		})
+	}
+
+	svc.Status = v1.ServiceStatus{
+		LoadBalancer: v1.LoadBalancerStatus{
+			Ingress: ingress,
+		},
+	}
+
+	if err := r.Client.Status().Update(ctx, &svc); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	return ctrl.Result{}, nil
 }
 
