@@ -11,7 +11,9 @@ be used for iterative development as we work to meet our Alpha -> Beta
 
 ## Try it out
 
-_Requires [kind](http://kind.sigs.k8s.io)_
+Prerequisites:
+- [kind](http://kind.sigs.k8s.io)
+- This git repository should be checked out within a `GOPATH`, i.e. in `$GOPATH/src/sigs.k8s.io/mcs-api`
 
 To see the API in action, run `make demo` to build and run a local demo against
 a pair of kind clusters. Alternatively, you can take a self guided tour. Use:
