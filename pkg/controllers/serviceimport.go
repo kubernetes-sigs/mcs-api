@@ -64,9 +64,7 @@ func shouldIgnoreImport(svcImport *v1alpha1.ServiceImport) bool {
 // +kubebuilder:rbac:groups=core,resources=services/status,verbs=get;list;watch;create;update;patch
 
 // Reconcile the changes.
-func (r *ServiceImportReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func (r *ServiceImportReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	serviceName := derivedName(req.NamespacedName)
 	log := r.Log.WithValues("serviceimport", req.NamespacedName, "derived", serviceName)
 	var svcImport v1alpha1.ServiceImport

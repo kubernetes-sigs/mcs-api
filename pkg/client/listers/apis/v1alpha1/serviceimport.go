@@ -26,8 +26,10 @@ import (
 )
 
 // ServiceImportLister helps list ServiceImports.
+// All objects returned here must be treated as read-only.
 type ServiceImportLister interface {
 	// List lists all ServiceImports in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ServiceImport, err error)
 	// ServiceImports returns an object that can list and get ServiceImports.
 	ServiceImports(namespace string) ServiceImportNamespaceLister
@@ -58,10 +60,13 @@ func (s *serviceImportLister) ServiceImports(namespace string) ServiceImportName
 }
 
 // ServiceImportNamespaceLister helps list and get ServiceImports.
+// All objects returned here must be treated as read-only.
 type ServiceImportNamespaceLister interface {
 	// List lists all ServiceImports in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ServiceImport, err error)
 	// Get retrieves the ServiceImport from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.ServiceImport, error)
 	ServiceImportNamespaceListerExpansion
 }
