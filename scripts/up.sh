@@ -50,7 +50,7 @@ function pod_cidrs() {
 
 function add_routes() {
   unset IFS
-  routes=$(kubectl --kubeconfig ${2} get nodes -o jsonpath='{range .items[*]}ip route add {.spec.podCIDR} via {.status.addresses[?(.type=="InternalIP")].address}{"\n"}')
+  routes=$(kubectl --kubeconfig ${2} get nodes -o jsonpath='{range .items[*]}ip route add {.spec.podCIDR} via {.status.addresses[?(.type=="InternalIP")].address}{"\n"}' | grep -v -E '^ip route add *via *$')
   echo "Connecting cluster ${1} to ${2}"
 
   IFS=$'\n'
