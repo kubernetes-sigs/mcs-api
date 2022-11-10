@@ -155,11 +155,6 @@ var _ = Describe("Connectivity", func() {
 				LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
 			})
 			Expect(err).ToNot(HaveOccurred())
-			//podips := 0
-			//for _, s := range pods.Items {
-			//	podips += len(s.Status.PodIP)
-			//}
-			//return podips
 			return pods.Items[0].Status.PodIP
 		}, 30).ShouldNot(BeEmpty())
 		pods, err := cluster2.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
