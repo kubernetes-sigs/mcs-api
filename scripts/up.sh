@@ -50,7 +50,7 @@ function pod_cidrs() {
 
 function add_routes() {
   unset IFS
-  routes=$(kubectl --kubeconfig ${2} get nodes -o jsonpath='{range .items[*]}ip route add {.spec.podCIDR} via {.status.addresses[?(.type=="InternalIP")].address}{"\n"}')
+  routes=$(kubectl --kubeconfig ${3} get node ${2} -o jsonpath='ip route add {.spec.podCIDR} via {.status.addresses[?(.type=="InternalIP")].address}')
   echo "Connecting cluster ${1} to ${2}"
 
   IFS=$'\n'
@@ -61,12 +61,13 @@ function add_routes() {
   done
   unset IFS
 }
+
 waitfor pod_cidrs ${kubeconfig1}
 waitfor pod_cidrs ${kubeconfig2}
 
 echo "Connecting cluster networks..."
-add_routes "${c1}" "${kubeconfig2}"
-add_routes "${c2}" "${kubeconfig1}"
+add_routes "${c1}" "${c2}-control-plane" "${kubeconfig2}"
+add_routes "${c2}" "${c1}-control-plane" "${kubeconfig1}"
 echo "Cluster networks connected"
 
 ${k1} apply -f ../config/crd -f ../config/rbac
@@ -74,8 +75,8 @@ ${k2} apply -f ../config/crd -f ../config/rbac
 
 ${k1} create sa mcs-api-controller
 ${k1} create clusterrolebinding mcs-api-binding --clusterrole=mcs-derived-service-manager --serviceaccount=default:mcs-api-controller
-${k1} run --image "${controller_image}" --serviceaccount=mcs-api-controller --image-pull-policy=Never mcs-api-controller
+${k1} run --image "${controller_image}" --image-pull-policy=Never mcs-api-controller --overrides='{ "spec": { "serviceAccount": "mcs-api-controller" }  }'
 
 ${k2} create sa mcs-api-controller
 ${k2} create clusterrolebinding mcs-api-binding --clusterrole=mcs-derived-service-manager --serviceaccount=default:mcs-api-controller
-${k2} run --image "${controller_image}" --serviceaccount=mcs-api-controller --image-pull-policy=Never mcs-api-controller
+${k2} run --image "${controller_image}" --image-pull-policy=Never mcs-api-controller --overrides='{ "spec": { "serviceAccount": "mcs-api-controller" }  }'
