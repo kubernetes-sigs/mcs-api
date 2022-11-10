@@ -129,7 +129,7 @@ var _ = Describe("Connectivity", func() {
 
 		ctx           = context.Background()
 		serviceImport *v1alpha1.ServiceImport
-		helloPod      v1.Pod
+		pods          *v1.PodList
 	)
 	BeforeEach(func() {
 		namespace = fmt.Sprintf("mcse2e-conformance-%v", rand.Uint32())
@@ -157,11 +157,10 @@ var _ = Describe("Connectivity", func() {
 			Expect(err).ToNot(HaveOccurred())
 			return pods.Items[0].Status.PodIP
 		}, 30).ShouldNot(BeEmpty())
-		pods, err := cluster2.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		pods, err = cluster2.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 			LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
 		})
 		Expect(err).ToNot(HaveOccurred())
-		helloPod = pods.Items[0]
 		Eventually(func() int {
 			slices, err := cluster2.k8s.DiscoveryV1beta1().EndpointSlices(namespace).List(ctx, metav1.ListOptions{
 				LabelSelector: labels.Set{discoveryv1beta1.LabelServiceName: helloService.Name}.AsSelector().String(),
@@ -212,16 +211,16 @@ var _ = Describe("Connectivity", func() {
 	})
 	Specify("TCP connects across clusters using the pod IP", func() {
 		pod := requestPod
-		pod.Spec.Containers[0].Args = []string{"nc", helloPod.Status.PodIP, "42"}
+		pod.Spec.Containers[0].Args = []string{"nc", pods.Items[0].Status.PodIP, "42"}
 		_, err := cluster1.k8s.CoreV1().Pods(namespace).Create(ctx, &pod, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(func() (string, error) {
 			return podLogs(ctx, cluster1.k8s, namespace, pod.Name)
 		}, 30).Should(Equal("hello\n"))
 	})
-	Specify("UDP connects across clusters using the pod IP}", func() {
+	Specify("UDP connects across clusters using the pod IP", func() {
 		pod := requestPod
-		pod.Spec.Containers[0].Args = []string{"sh", "-c", fmt.Sprintf("echo hi | nc -u %s 42", helloPod.Status.PodIP)}
+		pod.Spec.Containers[0].Args = []string{"sh", "-c", fmt.Sprintf("echo hi | nc -u %s 42", pods.Items[0].Status.PodIP)}
 		_, err := cluster1.k8s.CoreV1().Pods(namespace).Create(ctx, &pod, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(func() (string, error) {
