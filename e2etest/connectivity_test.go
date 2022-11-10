@@ -132,7 +132,7 @@ var _ = Describe("Connectivity", func() {
 		helloPod      v1.Pod
 	)
 	BeforeEach(func() {
-		namespace = fmt.Sprintf("e2etest-%v", rand.Uint32())
+		namespace = fmt.Sprintf("mcse2e-conformance-%v", rand.Uint32())
 		_, err := cluster1.k8s.CoreV1().Namespaces().Create(ctx, &v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
 		}, metav1.CreateOptions{})
