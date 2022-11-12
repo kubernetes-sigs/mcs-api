@@ -75,6 +75,12 @@ var (
 			},
 		},
 	}
+	objectFieldSelector = v1.ObjectFieldSelector{FieldPath: "status.podIP"}
+	envVarSource        = v1.EnvVarSource{FieldRef: &objectFieldSelector}
+	podIP               = v1.EnvVar{
+		Name:      "MY_Pod_IP",
+		ValueFrom: &envVarSource,
+	}
 	helloDeployment = appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "hello",
@@ -95,12 +101,22 @@ var (
 						{
 							Name:  "hello-tcp",
 							Image: "busybox",
-							Args:  []string{"nc", "-lk", "-p", "42", "-v", "-e", "echo", "hello"},
+							Args:  []string{"nc", "-lk", "-p", "42", "-v", "-e", "echo", "hello from $(MY_Pod_IP)"},
+							Env: []v1.EnvVar{
+								podIP,
+							},
 						},
 						{
 							Name:  "hello-udp",
 							Image: "busybox",
-							Args:  []string{"nc", "-lk", "-p", "42", "-u", "-v", "-e", "echo", "hello"},
+							Args:  []string{"nc", "-lk", "-p", "42", "-u", "-v", "-e", "echo", "hello from $(MY_Pod_IP)"},
+							Env: []v1.EnvVar{
+								podIP,
+								{
+									Name:  "TEST",
+									Value: "TEST",
+								},
+							},
 						},
 					},
 				},
@@ -209,40 +225,26 @@ var _ = Describe("Connectivity", func() {
 		Expect(cluster1.k8s.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{}))
 		Expect(cluster2.k8s.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{}))
 	})
-	Specify("TCP connects across clusters using the pod IP", func() {
-		pod := requestPod
-		pod.Spec.Containers[0].Args = []string{"nc", pods.Items[0].Status.PodIP, "42"}
-		_, err := cluster1.k8s.CoreV1().Pods(namespace).Create(ctx, &pod, metav1.CreateOptions{})
-		Expect(err).ToNot(HaveOccurred())
-		Eventually(func() (string, error) {
-			return podLogs(ctx, cluster1.k8s, namespace, pod.Name)
-		}, 30).Should(Equal("hello\n"))
-	})
-	Specify("UDP connects across clusters using the pod IP", func() {
-		pod := requestPod
-		pod.Spec.Containers[0].Args = []string{"sh", "-c", fmt.Sprintf("echo hi | nc -u %s 42", pods.Items[0].Status.PodIP)}
-		_, err := cluster1.k8s.CoreV1().Pods(namespace).Create(ctx, &pod, metav1.CreateOptions{})
-		Expect(err).ToNot(HaveOccurred())
-		Eventually(func() (string, error) {
-			return podLogs(ctx, cluster1.k8s, namespace, pod.Name)
-		}, 30).Should(Equal("hello\n"))
-	})
 	Specify("TCP connects across clusters using the VIP", func() {
 		pod := requestPod
-		pod.Spec.Containers[0].Args = []string{"nc", serviceImport.Spec.IPs[0], "42"}
+		for i := 0; i <= 49; i++ {
+			pod.Spec.Containers[0].Args = []string{"nc", serviceImport.Spec.IPs[0], "42"}
+		}
 		_, err := cluster1.k8s.CoreV1().Pods(namespace).Create(ctx, &pod, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(func() (string, error) {
 			return podLogs(ctx, cluster1.k8s, namespace, pod.Name)
-		}, 30).Should(Equal("hello\n"))
+		}, 30).Should(Equal(fmt.Sprintf("hello from %s\n", pods.Items[0].Status.PodIP)))
 	})
 	Specify("UDP connects across clusters using the VIP", func() {
 		pod := requestPod
-		pod.Spec.Containers[0].Args = []string{"sh", "-c", fmt.Sprintf("echo hi | nc -u %s 42", serviceImport.Spec.IPs[0])}
+		for i := 0; i <= 49; i++ {
+			pod.Spec.Containers[0].Args = []string{"sh", "-c", fmt.Sprintf("echo hi | nc -u %s 42", serviceImport.Spec.IPs[0])}
+		}
 		_, err := cluster1.k8s.CoreV1().Pods(namespace).Create(ctx, &pod, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(func() (string, error) {
 			return podLogs(ctx, cluster1.k8s, namespace, pod.Name)
-		}, 30).Should(Equal("hello\n"))
+		}, 30).Should(Equal(fmt.Sprintf("hello from %s\n", pods.Items[0].Status.PodIP)))
 	})
 })
