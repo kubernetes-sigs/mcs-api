@@ -75,12 +75,6 @@ var (
 			},
 		},
 	}
-	objectFieldSelector = v1.ObjectFieldSelector{FieldPath: "status.podIP"}
-	envVarSource        = v1.EnvVarSource{FieldRef: &objectFieldSelector}
-	podIP               = v1.EnvVar{
-		Name:      "MY_Pod_IP",
-		ValueFrom: &envVarSource,
-	}
 	helloDeployment = appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "hello",
@@ -101,20 +95,30 @@ var (
 						{
 							Name:  "hello-tcp",
 							Image: "busybox",
-							Args:  []string{"nc", "-lk", "-p", "42", "-v", "-e", "echo", "hello from $(MY_Pod_IP)"},
+							Args:  []string{"nc", "-lk", "-p", "42", "-v", "-e", "echo", "hello from $(MY_POD_IP)"},
 							Env: []v1.EnvVar{
-								podIP,
+								{
+									Name: "MY_POD_IP",
+									ValueFrom: &v1.EnvVarSource{
+										FieldRef: &v1.ObjectFieldSelector{
+											FieldPath: "status.podIP",
+										},
+									},
+								},
 							},
 						},
 						{
 							Name:  "hello-udp",
 							Image: "busybox",
-							Args:  []string{"nc", "-lk", "-p", "42", "-u", "-v", "-e", "echo", "hello from $(MY_Pod_IP)"},
+							Args:  []string{"nc", "-lk", "-p", "42", "-u", "-v", "-e", "echo", "hello from $(MY_POD_IP)"},
 							Env: []v1.EnvVar{
-								podIP,
 								{
-									Name:  "TEST",
-									Value: "TEST",
+									Name: "MY_POD_IP",
+									ValueFrom: &v1.EnvVarSource{
+										FieldRef: &v1.ObjectFieldSelector{
+											FieldPath: "status.podIP",
+										},
+									},
 								},
 							},
 						},
