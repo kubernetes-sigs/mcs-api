@@ -19,8 +19,6 @@ package e2etest
 import (
 	"context"
 	"fmt"
-	"math/rand"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -28,7 +26,9 @@ import (
 	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"math/rand"
 	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	"strings"
 )
 
 var (
@@ -93,9 +93,11 @@ var (
 				Spec: v1.PodSpec{
 					Containers: []v1.Container{
 						{
-							Name:  "hello-tcp",
-							Image: "busybox",
-							Args:  []string{"nc", "-lk", "-p", "42", "-v", "-e", "echo", "hello from $(MY_POD_IP)"},
+							Name: "hello-tcp",
+							//Image: "busybox",
+							//Args:  []string{"nc", "-lk", "-p", "42", "-v", "-e", "echo", "$(MY_POD_IP)"},
+							Image: "alpine/socat",
+							Args:  []string{"-v", "-v", "TCP-LISTEN:42,crlf,reuseaddr,fork", "SYSTEM:echo $(MY_POD_IP)"},
 							Env: []v1.EnvVar{
 								{
 									Name: "MY_POD_IP",
@@ -109,8 +111,10 @@ var (
 						},
 						{
 							Name:  "hello-udp",
-							Image: "busybox",
-							Args:  []string{"nc", "-lk", "-p", "42", "-u", "-v", "-e", "echo", "hello from $(MY_POD_IP)"},
+							Image: "alpine/socat",
+							Args:  []string{"-v", "-v", "UDP-LISTEN:42,crlf,reuseaddr,fork", "SYSTEM:echo $(MY_POD_IP)"},
+							//Image: "busybox",
+							//Args:  []string{"nc", "-lk", "-p", "42", "-u", "-v", "-e", "echo", "$(MY_POD_IP)"},
 							Env: []v1.EnvVar{
 								{
 									Name: "MY_POD_IP",
@@ -129,14 +133,15 @@ var (
 	}
 	requestPod = v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "request",
+			Name:   "request",
+			Labels: map[string]string{"app": "request"},
 		},
 		Spec: v1.PodSpec{
 			Containers: []v1.Container{
 				{
 					Name:  "request",
 					Image: "busybox",
-					Args:  []string{"nc"},
+					Args:  []string{"/bin/sh", "-ec", "while :; do echo '.'; sleep 5 ; done"},
 				},
 			},
 		},
@@ -161,6 +166,9 @@ var _ = Describe("Connectivity", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
 		}, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
+		pod := requestPod
+		_, err = cluster1.k8s.CoreV1().Pods(namespace).Create(ctx, &pod, metav1.CreateOptions{})
+		Expect(err).ToNot(HaveOccurred())
 		dep := helloDeployment
 		_, err = cluster2.k8s.AppsV1().Deployments(namespace).Create(ctx, &dep, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
@@ -170,6 +178,11 @@ var _ = Describe("Connectivity", func() {
 		imp := helloServiceImport
 		_, err = cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Create(ctx, &imp, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
+		Eventually(func() string {
+			rp, err := cluster1.k8s.CoreV1().Pods(namespace).Get(ctx, requestPod.Name, metav1.GetOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			return rp.Name
+		}).ShouldNot(BeEmpty())
 		Eventually(func() string {
 			pods, err := cluster2.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 				LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
@@ -229,26 +242,38 @@ var _ = Describe("Connectivity", func() {
 		Expect(cluster1.k8s.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{}))
 		Expect(cluster2.k8s.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{}))
 	})
-	Specify("TCP connects across clusters using the VIP", func() {
-		pod := requestPod
-		for i := 0; i <= 49; i++ {
-			pod.Spec.Containers[0].Args = []string{"nc", serviceImport.Spec.IPs[0], "42"}
-		}
-		_, err := cluster1.k8s.CoreV1().Pods(namespace).Create(ctx, &pod, metav1.CreateOptions{})
-		Expect(err).ToNot(HaveOccurred())
-		Eventually(func() (string, error) {
-			return podLogs(ctx, cluster1.k8s, namespace, pod.Name)
-		}, 30).Should(Equal(fmt.Sprintf("hello from %s\n", pods.Items[0].Status.PodIP)))
-	})
 	Specify("UDP connects across clusters using the VIP", func() {
-		pod := requestPod
-		for i := 0; i <= 49; i++ {
-			pod.Spec.Containers[0].Args = []string{"sh", "-c", fmt.Sprintf("echo hi | nc -u %s 42", serviceImport.Spec.IPs[0])}
-		}
-		_, err := cluster1.k8s.CoreV1().Pods(namespace).Create(ctx, &pod, metav1.CreateOptions{})
+		successfulChecks := 0
+		pod, err := cluster1.k8s.CoreV1().Pods(namespace).Get(ctx, requestPod.Name, metav1.GetOptions{})
 		Expect(err).ToNot(HaveOccurred())
-		Eventually(func() (string, error) {
-			return podLogs(ctx, cluster1.k8s, namespace, pod.Name)
-		}, 30).Should(Equal(fmt.Sprintf("hello from %s\n", pods.Items[0].Status.PodIP)))
+		command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc -uw1 %s 42", serviceImport.Spec.IPs[0])}
+		for i := 0; i <= 49; i++ {
+			stout, _, err := execCmd(cluster1.k8s, restcfg1, pod.Name, pod.Namespace, command)
+			Expect(err).ToNot(HaveOccurred())
+			ip := strings.TrimSpace(string(stout))
+			if ip == strings.TrimSpace(pods.Items[0].Status.PodIP) {
+				successfulChecks++
+			}
+		}
+		Eventually(func() int {
+			return successfulChecks
+		}).Should(Equal(50))
+	})
+	Specify("TCP connects across clusters using the VIP", func() {
+		successfulChecks := 0
+		pod, err := cluster1.k8s.CoreV1().Pods(namespace).Get(ctx, requestPod.Name, metav1.GetOptions{})
+		Expect(err).ToNot(HaveOccurred())
+		command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s 42", serviceImport.Spec.IPs[0])}
+		for i := 0; i <= 49; i++ {
+			stout, _, err := execCmd(cluster1.k8s, restcfg1, pod.Name, pod.Namespace, command)
+			Expect(err).ToNot(HaveOccurred())
+			ip := strings.TrimSpace(string(stout))
+			if ip == strings.TrimSpace(pods.Items[0].Status.PodIP) {
+				successfulChecks++
+			}
+		}
+		Eventually(func() int {
+			return successfulChecks
+		}).Should(Equal(50))
 	})
 })
