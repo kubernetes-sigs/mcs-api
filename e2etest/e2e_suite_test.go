@@ -55,20 +55,6 @@ type clusterClients struct {
 	mcs mcsclient.Interface
 }
 
-//func podLogs(ctx context.Context, k8s kubernetes.Interface, namespace, name string) (string, error) {
-//	logRequest := k8s.CoreV1().Pods(namespace).GetLogs(name, &v1.PodLogOptions{})
-//	logs, err := logRequest.Stream(ctx)
-//	if err != nil {
-//		return "", err
-//	}
-//	defer logs.Close()
-//	data, err := ioutil.ReadAll(logs)
-//	if err != nil {
-//		return "", err
-//	}
-//	return string(data), nil
-//}
-
 func TestE2E(t *testing.T) {
 	flag.Parse()
 	RegisterFailHandler(Fail)
