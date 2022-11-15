@@ -248,7 +248,6 @@ var _ = Describe("Connectivity", func() {
 			stout, _, err := execCmd(cluster1.k8s, restcfg1, reqPod.Name, reqPod.Namespace, command)
 			Expect(err).ToNot(HaveOccurred())
 			ip := strings.TrimSpace(string(stout))
-			fmt.Println(ip)
 			if ip == strings.TrimSpace(pods.Items[0].Status.PodIP) {
 				successfulChecks++
 			}
@@ -264,7 +263,6 @@ var _ = Describe("Connectivity", func() {
 			stout, _, err := execCmd(cluster1.k8s, restcfg1, reqPod.Name, reqPod.Namespace, command)
 			Expect(err).ToNot(HaveOccurred())
 			ip := strings.TrimSpace(string(stout))
-			fmt.Println(ip)
 			if ip == strings.TrimSpace(pods.Items[0].Status.PodIP) {
 				successfulChecks++
 			}
