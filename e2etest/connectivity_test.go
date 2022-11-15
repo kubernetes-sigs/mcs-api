@@ -244,31 +244,33 @@ var _ = Describe("Connectivity", func() {
 	Specify("UDP connects across clusters using the VIP", func() {
 		successfulChecks := 0
 		command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc -uw1 %s 42", serviceImport.Spec.IPs[0])}
-		for i := 0; i <= 49; i++ {
+		for i := 0; i <= 59; i++ {
 			stout, _, err := execCmd(cluster1.k8s, restcfg1, reqPod.Name, reqPod.Namespace, command)
 			Expect(err).ToNot(HaveOccurred())
 			ip := strings.TrimSpace(string(stout))
+			fmt.Println(ip)
 			if ip == strings.TrimSpace(pods.Items[0].Status.PodIP) {
 				successfulChecks++
 			}
 		}
 		Eventually(func() int {
 			return successfulChecks
-		}).Should(Equal(50))
+		}).Should(BeNumerically(">=", 50))
 	})
 	Specify("TCP connects across clusters using the VIP", func() {
 		successfulChecks := 0
 		command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s 42", serviceImport.Spec.IPs[0])}
-		for i := 0; i <= 49; i++ {
+		for i := 0; i <= 59; i++ {
 			stout, _, err := execCmd(cluster1.k8s, restcfg1, reqPod.Name, reqPod.Namespace, command)
 			Expect(err).ToNot(HaveOccurred())
 			ip := strings.TrimSpace(string(stout))
+			fmt.Println(ip)
 			if ip == strings.TrimSpace(pods.Items[0].Status.PodIP) {
 				successfulChecks++
 			}
 		}
 		Eventually(func() int {
 			return successfulChecks
-		}).Should(Equal(50))
+		}).Should(BeNumerically(">=", 50))
 	})
 })
