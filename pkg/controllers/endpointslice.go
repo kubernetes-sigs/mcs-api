@@ -46,9 +46,7 @@ func shouldIgnoreEndpointSlice(epSlice *discoveryv1beta1.EndpointSlice) bool {
 }
 
 // Reconcile the changes.
-func (r *EndpointSliceReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+func (r *EndpointSliceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("endpointslice", req.NamespacedName)
 
 	var epSlice discoveryv1beta1.EndpointSlice
