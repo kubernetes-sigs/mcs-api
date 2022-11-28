@@ -6,7 +6,7 @@
 /bazel-*
 bin
 .classpath
-/cluster/env.sh
+/cluster
 /.config/gcloud*/
 *.dll
 /doc_tmp/
