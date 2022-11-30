@@ -1,0 +1,56 @@
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: kube-system
+apiVersion: v1
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health {
+           lameduck 5s
+        }
+        multicluster clusterset.local
+        ready
+        kubernetes cluster.local in-addr.arpa ip6.arpa {
+           pods insecure
+           fallthrough in-addr.arpa ip6.arpa
+           ttl 30
+        }
+        prometheus :9153
+        forward . /etc/resolv.conf {
+           max_concurrent 1000
+        }
+        cache 30
+        loop
+        reload
+        loadbalance
+    }
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:coredns
+rules:
+  - apiGroups:
+      - ""
+      - discovery.k8s.io
+      - multicluster.x-k8s.io
+    resources:
+      - endpoints
+      - endpointslices
+      - serviceimports
+      - services
+      - pods
+      - namespaces
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+
+
