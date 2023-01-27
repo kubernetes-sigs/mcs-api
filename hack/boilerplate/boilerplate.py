@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright 2015 The Kubernetes Authors.
 #
@@ -193,7 +193,7 @@ def get_regexs():
         '(%s)' % "|".join(map(lambda l: str(l), years)))
     # strip // +build \n\n build constraints
     regexs["go_build_constraints"] = re.compile(
-        r"^(// \+build.*\n)+\n", re.MULTILINE)
+        r"^(// ?(go:|\+)build.*\n)+\n", re.MULTILINE)
     # strip #!.* from shell scripts
     regexs["shebang"] = re.compile(r"^(#!.*\n)\n*", re.MULTILINE)
     return regexs
