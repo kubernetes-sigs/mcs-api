@@ -17,6 +17,7 @@ limitations under the License.
 package controllers
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base32"
 	"os"
@@ -42,7 +43,7 @@ func derivedName(name types.NamespacedName) string {
 }
 
 // Start the controllers with the supplied config
-func Start(cfg *rest.Config, setupLog logr.Logger, opts ctrl.Options, stopCh <-chan struct{}) error {
+func Start(ctx context.Context, cfg *rest.Config, setupLog logr.Logger, opts ctrl.Options) error {
 	mgr, err := ctrl.NewManager(cfg, opts)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -72,7 +73,7 @@ func Start(cfg *rest.Config, setupLog logr.Logger, opts ctrl.Options, stopCh <-c
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(stopCh); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		return err
 	}

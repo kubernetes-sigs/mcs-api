@@ -54,7 +54,7 @@ func main() {
 	}
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 
-	if err := controllers.Start(ctrl.GetConfigOrDie(), setupLog, opts, ctrl.SetupSignalHandler()); err != nil {
+	if err := controllers.Start(ctrl.SetupSignalHandler(), ctrl.GetConfigOrDie(), setupLog, opts); err != nil {
 		setupLog.Error(err, "problem running controllers")
 		os.Exit(1)
 	}

@@ -50,14 +50,13 @@ var (
 	cfg             *rest.Config
 	k8s             client.Client
 	env             *envtest.Environment
-	stopCh          chan struct{}
 	clusterProvider *cluster.Provider
 	testNS          string
 )
 
 var _ = BeforeSuite(func(done Done) {
 	rand.Seed(GinkgoRandomSeed())
-	log.SetLogger(zap.LoggerTo(GinkgoWriter, true))
+	log.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
 	// Use Kind for a more up-to-date K8s
 	clusterProvider = cluster.NewProvider()
 	Expect(clusterProvider.Create(clusterName)).To(Succeed())
@@ -95,15 +94,11 @@ var _ = BeforeSuite(func(done Done) {
 		Scheme: scheme,
 	}
 
-	stopCh = make(chan struct{})
-	go Start(cfg, log.Log, opts, stopCh)
+	go Start(context.TODO(), cfg, log.Log, opts)
 	close(done)
 }, 60)
 
 var _ = AfterSuite(func() {
-	if stopCh != nil {
-		close(stopCh)
-	}
 	Expect(clusterProvider.Delete(clusterName, "")).To(Succeed())
 	err := env.Stop()
 	Expect(err).ToNot(HaveOccurred())
