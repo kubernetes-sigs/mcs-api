@@ -70,7 +70,6 @@ add_routes "${c1}" "${c2}-control-plane" "${kubeconfig2}"
 add_routes "${c2}" "${c1}-control-plane" "${kubeconfig1}"
 echo "Cluster networks connected"
 
-echo "Setting up MCS api controller..."
 ${k1} apply -f ../config/crd -f ../config/rbac
 ${k2} apply -f ../config/crd -f ../config/rbac
 
@@ -81,24 +80,3 @@ ${k1} run --image "${controller_image}" --image-pull-policy=Never mcs-api-contro
 ${k2} create sa mcs-api-controller
 ${k2} create clusterrolebinding mcs-api-binding --clusterrole=mcs-derived-service-manager --serviceaccount=default:mcs-api-controller
 ${k2} run --image "${controller_image}" --image-pull-policy=Never mcs-api-controller --overrides='{ "spec": { "serviceAccount": "mcs-api-controller" }  }'
-echo "MCS api controller installed"
-
-echo "Setting up CoreDNS MC plugin..."
-
-git clone https://github.com/coredns/coredns
-pushd coredns
-sed -i -e 's?^kubernetes:kubernetes?kubernetes:kubernetes\
-multicluster:github.com/coredns/multicluster?' plugin.cfg
-docker run --rm -i -t -v $PWD:/v -w /v golang:1.18 make
-docker build . -t coredns:coredns-v1.0
-popd
-rm -rf coredns
-
-kind load docker-image coredns:coredns-v1.0 -n "${c1}"
-kind load docker-image coredns:coredns-v1.0 -n "${c2}"
-
-${k1} apply -f coredns.yaml
-${k1} -n kube-system set image deployment/coredns coredns=coredns:coredns-v1.0
-${k2} apply -f coredns.yaml
-${k2} -n kube-system set image deployment/coredns coredns=coredns:coredns-v1.0
-echo "CoreDNS MC plugin installed"
