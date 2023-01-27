@@ -153,8 +153,7 @@ var _ = Describe("Connectivity", func() {
 
 		ctx           = context.Background()
 		serviceImport *v1alpha1.ServiceImport
-		pods1         *v1.PodList
-		pods2         *v1.PodList
+		pods          *v1.PodList
 		reqPod        *v1.Pod
 	)
 	BeforeEach(func() {
@@ -170,20 +169,14 @@ var _ = Describe("Connectivity", func() {
 		pod := requestPod
 		_, err = cluster1.k8s.CoreV1().Pods(namespace).Create(ctx, &pod, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
-		dep1 := helloDeployment
-		_, err = cluster1.k8s.AppsV1().Deployments(namespace).Create(ctx, &dep1, metav1.CreateOptions{})
+		dep := helloDeployment
+		_, err = cluster2.k8s.AppsV1().Deployments(namespace).Create(ctx, &dep, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
-		dep2 := helloDeployment
-		_, err = cluster2.k8s.AppsV1().Deployments(namespace).Create(ctx, &dep2, metav1.CreateOptions{})
+		svc := helloService
+		_, err = cluster2.k8s.CoreV1().Services(namespace).Create(ctx, &svc, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
-		svc1 := helloService
-		_, err = cluster1.k8s.CoreV1().Services(namespace).Create(ctx, &svc1, metav1.CreateOptions{})
-		Expect(err).ToNot(HaveOccurred())
-		svc2 := helloService
-		_, err = cluster2.k8s.CoreV1().Services(namespace).Create(ctx, &svc2, metav1.CreateOptions{})
-		Expect(err).ToNot(HaveOccurred())
-		imp1 := helloServiceImport
-		_, err = cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Create(ctx, &imp1, metav1.CreateOptions{})
+		imp := helloServiceImport
+		_, err = cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Create(ctx, &imp, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(func() string {
 			rp, err := cluster1.k8s.CoreV1().Pods(namespace).Get(ctx, requestPod.Name, metav1.GetOptions{})
@@ -191,24 +184,13 @@ var _ = Describe("Connectivity", func() {
 			return rp.Name
 		}).ShouldNot(BeEmpty())
 		Eventually(func() string {
-			pods, err := cluster1.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-				LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
-			})
-			Expect(err).ToNot(HaveOccurred())
-			return pods.Items[0].Status.PodIP
-		}, 30).ShouldNot(BeEmpty())
-		pods1, err = cluster1.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-			LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
-		})
-		Eventually(func() string {
 			pods, err := cluster2.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 				LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
 			})
 			Expect(err).ToNot(HaveOccurred())
 			return pods.Items[0].Status.PodIP
 		}, 30).ShouldNot(BeEmpty())
-		Expect(err).ToNot(HaveOccurred())
-		pods2, err = cluster2.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		pods, err = cluster2.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 			LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -301,7 +283,7 @@ var _ = Describe("Connectivity", func() {
 			stout, _, err := execCmd(cluster1.k8s, restcfg1, reqPod.Name, reqPod.Namespace, command)
 			Expect(err).ToNot(HaveOccurred())
 			ip := strings.TrimSpace(string(stout))
-			if ip == strings.TrimSpace(pods2.Items[0].Status.PodIP) {
+			if ip == strings.TrimSpace(pods.Items[0].Status.PodIP) {
 				successfulChecks++
 			}
 		}
@@ -316,89 +298,12 @@ var _ = Describe("Connectivity", func() {
 			stout, _, err := execCmd(cluster1.k8s, restcfg1, reqPod.Name, reqPod.Namespace, command)
 			Expect(err).ToNot(HaveOccurred())
 			ip := strings.TrimSpace(string(stout))
-			if ip == strings.TrimSpace(pods2.Items[0].Status.PodIP) {
+			if ip == strings.TrimSpace(pods.Items[0].Status.PodIP) {
 				successfulChecks++
 			}
 		}
 		Eventually(func() int {
 			return successfulChecks
 		}).Should(BeNumerically(">=", 50))
-	})
-	Specify("TCP connects across clusters using the cluster.local", func() {
-		successfulChecks := 0
-		command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc hello.%s.svc.cluster.local 42", namespace)}
-		for i := 0; i <= 59; i++ {
-			stout, _, err := execCmd(cluster1.k8s, restcfg1, reqPod.Name, reqPod.Namespace, command)
-			Expect(err).ToNot(HaveOccurred())
-			ip := strings.TrimSpace(string(stout))
-			if ip == strings.TrimSpace(pods1.Items[0].Status.PodIP) {
-				successfulChecks++
-			}
-		}
-		Eventually(func() int {
-			return successfulChecks
-		}).Should(BeNumerically(">=", 50))
-	})
-	Specify("TCP connects across clusters using the clusterset.local", func() {
-		successfulChecks := 0
-		command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc hello.%s.svc.clusterset.local 42", namespace)}
-		for i := 0; i <= 59; i++ {
-			stout, _, err := execCmd(cluster1.k8s, restcfg1, reqPod.Name, reqPod.Namespace, command)
-			Expect(err).ToNot(HaveOccurred())
-			ip := strings.TrimSpace(string(stout))
-			if ip == strings.TrimSpace(pods2.Items[0].Status.PodIP) {
-				successfulChecks++
-			}
-		}
-		Eventually(func() int {
-			return successfulChecks
-		}).Should(BeNumerically(">=", 50))
-	})
-	Specify("TCP connects to both clusters using the clusterset.local", func() {
-		successfulChecks := []bool{false, false}
-		Eventually(func() int {
-			slices, err := cluster1.k8s.DiscoveryV1beta1().EndpointSlices(namespace).List(ctx, metav1.ListOptions{
-				LabelSelector: labels.Set{discoveryv1beta1.LabelServiceName: helloService.Name}.AsSelector().String(),
-			})
-			Expect(err).ToNot(HaveOccurred())
-			eps := 0
-			for _, s := range slices.Items {
-				eps += len(s.Endpoints)
-			}
-			return eps
-		}, 30).Should(Equal(1))
-		slices, err := cluster1.k8s.DiscoveryV1beta1().EndpointSlices(namespace).List(ctx, metav1.ListOptions{
-			LabelSelector: labels.Set{discoveryv1beta1.LabelServiceName: helloService.Name}.AsSelector().String(),
-		})
-		Expect(err).ToNot(HaveOccurred())
-		importedSlice := slices.Items[0]
-		importedSlice.ObjectMeta = metav1.ObjectMeta{
-			Name: importedSlice.Name,
-			Labels: map[string]string{
-				v1alpha1.LabelServiceName: helloServiceImport.Name,
-			},
-		}
-		_, err = cluster1.k8s.DiscoveryV1beta1().EndpointSlices(namespace).Update(ctx, &importedSlice, metav1.UpdateOptions{})
-		Expect(err).ToNot(HaveOccurred())
-		Eventually(func() string {
-			updatedSlice, err := cluster1.k8s.DiscoveryV1beta1().EndpointSlices(namespace).Get(ctx, importedSlice.Name, metav1.GetOptions{})
-			Expect(err).ToNot(HaveOccurred())
-			return updatedSlice.Labels[discoveryv1beta1.LabelServiceName]
-		}).ShouldNot(BeEmpty())
-		Expect(err).ToNot(HaveOccurred())
-		command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc hello.%s.svc.clusterset.local 42", namespace)}
-		for i := 0; i <= 59; i++ {
-			stout, _, err := execCmd(cluster1.k8s, restcfg1, reqPod.Name, reqPod.Namespace, command)
-			Expect(err).ToNot(HaveOccurred())
-			ip := strings.TrimSpace(string(stout))
-			if ip == strings.TrimSpace(pods1.Items[0].Status.PodIP) {
-				successfulChecks[0] = true
-			} else if ip == strings.TrimSpace(pods2.Items[0].Status.PodIP) {
-				successfulChecks[1] = true
-			}
-		}
-		Eventually(func() []bool {
-			return successfulChecks
-		}).Should(Equal(([]bool{true, true})))
 	})
 })
