@@ -35,4 +35,4 @@ function cleanup() {
 trap cleanup EXIT
 
 ./up.sh
-go test ../e2etest --count=1
+ginkgo
