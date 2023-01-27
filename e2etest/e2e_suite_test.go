@@ -19,15 +19,16 @@ package e2etest
 import (
 	"bytes"
 	"flag"
-	"k8s.io/client-go/kubernetes/scheme"
-	restclient "k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/remotecommand"
 	"math/rand"
 	"os"
 	"strconv"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
+	"k8s.io/client-go/kubernetes/scheme"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
+
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
