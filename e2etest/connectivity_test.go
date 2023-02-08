@@ -58,6 +58,11 @@ var (
 			},
 		},
 	}
+	helloServiceExport = v1alpha1.ServiceExport{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "hello",
+		},
+	}
 	helloServiceImport = v1alpha1.ServiceImport{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "hello",
@@ -174,6 +179,9 @@ var _ = Describe("Connectivity", func() {
 		Expect(err).ToNot(HaveOccurred())
 		svc := helloService
 		_, err = cluster2.k8s.CoreV1().Services(namespace).Create(ctx, &svc, metav1.CreateOptions{})
+		Expect(err).ToNot(HaveOccurred())
+		exp := helloServiceExport
+		_, err = cluster2.mcs.MulticlusterV1alpha1().ServiceExports(namespace).Create(ctx, &exp, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
 		imp := helloServiceImport
 		_, err = cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Create(ctx, &imp, metav1.CreateOptions{})
