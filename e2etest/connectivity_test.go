@@ -196,7 +196,10 @@ var _ = Describe("Connectivity", func() {
 				LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
 			})
 			Expect(err).ToNot(HaveOccurred())
-			return pods.Items[0].Status.PodIP
+			if len(pods.Items) > 0 {
+				return pods.Items[0].Status.PodIP
+			}
+			return ""
 		}, 30).ShouldNot(BeEmpty())
 		pods, err = cluster2.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 			LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
