@@ -20,4 +20,7 @@ const (
 	// LabelServiceName is used to indicate the name of multi-cluster service
 	// that an EndpointSlice belongs to.
 	LabelServiceName = "multicluster.kubernetes.io/service-name"
+
+	// LabelSourceCluster is used to indicate the name of the cluster in which an exported resource exists.
+	LabelSourceCluster = "multicluster.kubernetes.io/source-cluster"
 )
