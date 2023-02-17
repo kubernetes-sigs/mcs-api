@@ -18,6 +18,7 @@ package conformance
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -122,4 +124,20 @@ func execCmd(k8s kubernetes.Interface, config *rest.Config, podName string, podN
 		return []byte{}, []byte{}, err
 	}
 	return stdout.Bytes(), stderr.Bytes(), nil
+}
+
+func startRequestPod(ctx context.Context, client clusterClients, namespace string) {
+	_, err := client.k8s.CoreV1().Pods(namespace).Create(ctx, &requestPod, metav1.CreateOptions{})
+	Expect(err).ToNot(HaveOccurred())
+
+	Eventually(func() error {
+		pod, err := client.k8s.CoreV1().Pods(namespace).Get(ctx, requestPod.Name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if pod.Status.Phase != v1.PodRunning {
+			return fmt.Errorf("pod is not running yet, current status %v", pod.Status.Phase)
+		}
+		return nil
+	}, 20, 1).Should(Succeed())
 }
