@@ -19,7 +19,6 @@ package e2etest
 import (
 	"bytes"
 	"flag"
-	"math/rand"
 	"os"
 	"strconv"
 	"testing"
@@ -63,8 +62,6 @@ func TestE2E(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	rand.Seed(GinkgoRandomSeed())
-
 	Expect(*kubeconfig1).ToNot(BeEmpty(), "either --kubeconfig1 or KUBECONFIG1 must be set")
 	Expect(*kubeconfig2).ToNot(BeEmpty(), "either --kubeconfig2 or KUBECONFIG2 must be set")
 

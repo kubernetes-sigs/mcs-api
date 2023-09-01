@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"path/filepath"
 	"testing"
 	"time"
@@ -54,7 +53,6 @@ var (
 )
 
 var _ = BeforeSuite(func(done Done) {
-	rand.Seed(GinkgoRandomSeed())
 	log.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
 	// Use Kind for a more up-to-date K8s
 	clusterProvider = cluster.NewProvider()
