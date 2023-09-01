@@ -49,3 +49,4 @@ Session.vim
 .vscode
 /www/test_out
 .*.timestamp
+sigs.k8s.io/
