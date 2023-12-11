@@ -28,6 +28,7 @@ readonly GOMODCACHE="$(go env GOMODCACHE)"
 readonly GO111MODULE="on"
 readonly GOFLAGS="-mod=readonly"
 readonly GOPATH="$(mktemp -d)"
+readonly YEAR=$(date +%Y)
 
 export GOMODCACHE GO111MODULE GOFLAGS GOPATH
 
@@ -81,7 +82,7 @@ do
 
   echo "Generating ${VERSION} deepcopy at ${APIS_PKG}/apis/${VERSION}"
   go run sigs.k8s.io/controller-tools/cmd/controller-gen \
-    object:headerFile=${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt \
+    object:headerFile="${SCRIPT_ROOT}/hack/boilerplate/boilerplate.go.txt",year=${YEAR} \
     paths="${APIS_PKG}/apis/${VERSION}"
 
 done
