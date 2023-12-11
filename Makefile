@@ -60,7 +60,6 @@ vet:
 .PHONY: generate
 generate:
 	./hack/update-codegen.sh
-	$(CONTROLLER_GEN) object:headerFile=./hack/boilerplate.go.txt paths="./..."
 
 # Generate manifests e.g. CRD, RBAC etc.
 .PHONY: manifests
