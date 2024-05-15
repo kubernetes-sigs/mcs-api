@@ -26,8 +26,10 @@ import (
 )
 
 // ServiceExportLister helps list ServiceExports.
+// All objects returned here must be treated as read-only.
 type ServiceExportLister interface {
 	// List lists all ServiceExports in the indexer.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ServiceExport, err error)
 	// ServiceExports returns an object that can list and get ServiceExports.
 	ServiceExports(namespace string) ServiceExportNamespaceLister
@@ -58,10 +60,13 @@ func (s *serviceExportLister) ServiceExports(namespace string) ServiceExportName
 }
 
 // ServiceExportNamespaceLister helps list and get ServiceExports.
+// All objects returned here must be treated as read-only.
 type ServiceExportNamespaceLister interface {
 	// List lists all ServiceExports in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ServiceExport, err error)
 	// Get retrieves the ServiceExport from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
 	Get(name string) (*v1alpha1.ServiceExport, error)
 	ServiceExportNamespaceListerExpansion
 }

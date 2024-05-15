@@ -31,7 +31,7 @@ k2="kubectl --kubeconfig ${kubeconfig2}"
 
 if [ ! -z "${BUILD_CONTROLLER}" ] || [ -z "$(docker images mcs-api-controller -q)" ]; then
   pushd ../
-  make -f kubebuilder.mk docker-build
+  make docker-build
   popd
 fi
 

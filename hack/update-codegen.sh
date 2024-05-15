@@ -27,8 +27,8 @@ GOBIN="$(go env GOBIN)"
 gobin="${GOBIN:-$(go env GOPATH)/bin}"
 
 OUTPUT_PKG=sigs.k8s.io/mcs-api/pkg/client
+OUTPUT_DIR=$SCRIPT_ROOT/pkg/client
 FQ_APIS=sigs.k8s.io/mcs-api/pkg/apis/v1alpha1
-APIS_PKG=sigs.k8s.io/mcs-api
 CLIENTSET_NAME=versioned
 CLIENTSET_PKG_NAME=clientset
 
@@ -38,22 +38,20 @@ if [[ "${VERIFY_CODEGEN:-}" == "true" ]]; then
 fi
 COMMON_FLAGS="${VERIFY_FLAG:-} --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt"
 
-echo "Generating deepcopy funcs"
-"${gobin}/deepcopy-gen" --input-dirs "${FQ_APIS}" -O zz_generated.deepcopy --bounding-dirs "${APIS_PKG}" ${COMMON_FLAGS}
-
 echo "Generating clientset at ${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}"
-"${gobin}/client-gen" --clientset-name "${CLIENTSET_NAME}" --input-base "" --input "${FQ_APIS}" --output-package "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}" ${COMMON_FLAGS}
+"${gobin}/client-gen" --clientset-name "${CLIENTSET_NAME}" --input-base "" --input "${FQ_APIS}" --output-pkg "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}" --output-dir "$OUTPUT_DIR/$CLIENTSET_PKG_NAME" ${COMMON_FLAGS}
 
 echo "Generating listers at ${OUTPUT_PKG}/listers"
-"${gobin}/lister-gen" --input-dirs "${FQ_APIS}" --output-package "${OUTPUT_PKG}/listers" ${COMMON_FLAGS}
+"${gobin}/lister-gen" "${FQ_APIS}" --output-pkg "${OUTPUT_PKG}/listers" --output-dir "${OUTPUT_DIR}/listers" ${COMMON_FLAGS}
 
 echo "Generating informers at ${OUTPUT_PKG}/informers"
 "${gobin}/informer-gen" \
-         --input-dirs "${FQ_APIS}" \
+         "${FQ_APIS}" \
          --versioned-clientset-package "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}/${CLIENTSET_NAME}" \
          --listers-package "${OUTPUT_PKG}/listers" \
-         --output-package "${OUTPUT_PKG}/informers" \
+         --output-pkg "${OUTPUT_PKG}/informers" \
+         --output-dir "${OUTPUT_DIR}/informers" \
          ${COMMON_FLAGS}
 
 echo "Generating register at ${FQ_APIS}"
-"${gobin}/register-gen" --output-package "${FQ_APIS}" --input-dirs ${FQ_APIS} ${COMMON_FLAGS}
+"${gobin}/register-gen" ${FQ_APIS} --output-file zz_generated.register.go ${COMMON_FLAGS}
