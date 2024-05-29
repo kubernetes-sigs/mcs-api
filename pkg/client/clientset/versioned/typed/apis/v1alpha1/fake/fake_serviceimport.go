@@ -23,7 +23,6 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
@@ -36,9 +35,9 @@ type FakeServiceImports struct {
 	ns   string
 }
 
-var serviceimportsResource = schema.GroupVersionResource{Group: "multicluster.x-k8s.io", Version: "v1alpha1", Resource: "serviceimports"}
+var serviceimportsResource = v1alpha1.SchemeGroupVersion.WithResource("serviceimports")
 
-var serviceimportsKind = schema.GroupVersionKind{Group: "multicluster.x-k8s.io", Version: "v1alpha1", Kind: "ServiceImport"}
+var serviceimportsKind = v1alpha1.SchemeGroupVersion.WithKind("ServiceImport")
 
 // Get takes name of the serviceImport, and returns the corresponding serviceImport object, and an error if there is any.
 func (c *FakeServiceImports) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ServiceImport, err error) {
@@ -117,7 +116,7 @@ func (c *FakeServiceImports) UpdateStatus(ctx context.Context, serviceImport *v1
 // Delete takes name of the serviceImport and deletes it. Returns an error if one occurs.
 func (c *FakeServiceImports) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(serviceimportsResource, c.ns, name), &v1alpha1.ServiceImport{})
+		Invokes(testing.NewDeleteActionWithOptions(serviceimportsResource, c.ns, name, opts), &v1alpha1.ServiceImport{})
 
 	return err
 }

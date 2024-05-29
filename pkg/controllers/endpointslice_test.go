@@ -24,7 +24,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/api/discovery/v1beta1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
@@ -34,22 +34,22 @@ var _ = Describe("EndpointSlice", func() {
 	ctx := context.Background()
 	Context("should be ignored", func() {
 		Specify("when not multi-cluster", func() {
-			Expect(shouldIgnoreEndpointSlice(&v1beta1.EndpointSlice{
+			Expect(shouldIgnoreEndpointSlice(&discoveryv1.EndpointSlice{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
 					Name:      "no-mc-service",
 				},
-				AddressType: v1beta1.AddressTypeIPv4,
+				AddressType: discoveryv1.AddressTypeIPv4,
 			})).To(BeTrue())
 		})
 		Specify("when deleted", func() {
-			Expect(shouldIgnoreEndpointSlice(&v1beta1.EndpointSlice{
+			Expect(shouldIgnoreEndpointSlice(&discoveryv1.EndpointSlice{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:         testNS,
 					Name:              "deleted",
 					DeletionTimestamp: &metav1.Time{Time: time.Now()},
 				},
-				AddressType: v1beta1.AddressTypeIPv4,
+				AddressType: discoveryv1.AddressTypeIPv4,
 			})).To(BeTrue())
 		})
 	})
@@ -58,13 +58,13 @@ var _ = Describe("EndpointSlice", func() {
 			serviceName        types.NamespacedName
 			derivedServiceName types.NamespacedName
 			sliceName          types.NamespacedName
-			epSlice            v1beta1.EndpointSlice
+			epSlice            discoveryv1.EndpointSlice
 		)
 		BeforeEach(func() {
 			serviceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("svc-%v", rand.Uint64())}
 			derivedServiceName = types.NamespacedName{Namespace: testNS, Name: derivedName(serviceName)}
 			sliceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("slice-%v", rand.Uint64())}
-			epSlice = v1beta1.EndpointSlice{
+			epSlice = discoveryv1.EndpointSlice{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
 					Name:      sliceName.Name,
@@ -72,15 +72,15 @@ var _ = Describe("EndpointSlice", func() {
 						v1alpha1.LabelServiceName: serviceName.Name,
 					},
 				},
-				AddressType: v1beta1.AddressTypeIPv4,
+				AddressType: discoveryv1.AddressTypeIPv4,
 			}
 			Expect(k8s.Create(ctx, &epSlice)).To(Succeed())
 		})
 		It("has correct label", func() {
 			Eventually(func() string {
-				var eps v1beta1.EndpointSlice
+				var eps discoveryv1.EndpointSlice
 				Expect(k8s.Get(ctx, sliceName, &eps)).Should(Succeed())
-				return eps.Labels[v1beta1.LabelServiceName]
+				return eps.Labels[discoveryv1.LabelServiceName]
 			}).Should(Equal(derivedServiceName.Name))
 		})
 	})
@@ -89,30 +89,30 @@ var _ = Describe("EndpointSlice", func() {
 			serviceName        types.NamespacedName
 			derivedServiceName types.NamespacedName
 			sliceName          types.NamespacedName
-			epSlice            v1beta1.EndpointSlice
+			epSlice            discoveryv1.EndpointSlice
 		)
 		BeforeEach(func() {
 			serviceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("svc-%v", rand.Uint64())}
 			derivedServiceName = types.NamespacedName{Namespace: testNS, Name: derivedName(serviceName)}
 			sliceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("slice-%v", rand.Uint64())}
-			epSlice = v1beta1.EndpointSlice{
+			epSlice = discoveryv1.EndpointSlice{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
 					Name:      sliceName.Name,
 					Labels: map[string]string{
-						v1alpha1.LabelServiceName: serviceName.Name,
-						v1beta1.LabelServiceName:  serviceName.Name,
+						v1alpha1.LabelServiceName:    serviceName.Name,
+						discoveryv1.LabelServiceName: serviceName.Name,
 					},
 				},
-				AddressType: v1beta1.AddressTypeIPv4,
+				AddressType: discoveryv1.AddressTypeIPv4,
 			}
 			Expect(k8s.Create(ctx, &epSlice)).To(Succeed())
 		})
 		It("has correct label", func() {
 			Eventually(func() string {
-				var eps v1beta1.EndpointSlice
+				var eps discoveryv1.EndpointSlice
 				Expect(k8s.Get(ctx, sliceName, &eps)).Should(Succeed())
-				return eps.Labels[v1beta1.LabelServiceName]
+				return eps.Labels[discoveryv1.LabelServiceName]
 			}).Should(Equal(derivedServiceName.Name))
 		})
 	})
