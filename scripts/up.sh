@@ -35,14 +35,42 @@ if [ ! -z "${BUILD_CONTROLLER}" ] || [ -z "$(docker images mcs-api-controller -q
   popd
 fi
 
+coredns_version="1.11.1"
+coredns_image="multicluster/coredns:latest"
+coredns_path="/tmp/coredns-${coredns_version}"
+if [ ! -d "${coredns_path}" ]; then
+  pushd /tmp
+  curl -fLO "https://github.com/coredns/coredns/archive/refs/tags/v${coredns_version}.tar.gz"
+  tar xf v${coredns_version}.tar.gz
+  popd
+fi
+pushd "${coredns_path}"
+if ! grep -q -F 'multicluster:github.com/coredns/multicluster' "plugin.cfg"; then
+  sed -i -e 's/^kubernetes:kubernetes$/&\nmulticluster:github.com\/coredns\/multicluster/' "plugin.cfg"
+fi
+make
+docker build -t "${coredns_image}" .
+popd
+
 kind create cluster --name "${c1}" --config "${c1}.yaml"
 kind create cluster --name "${c2}" --config "${c2}.yaml"
 
 kind get kubeconfig --name "${c1}" > "${kubeconfig1}"
 kind get kubeconfig --name "${c2}" > "${kubeconfig2}"
 
-kind load docker-image "${controller_image}" --name "${c1}"
-kind load docker-image "${controller_image}" --name "${c2}"
+kind load docker-image "${controller_image}" "${coredns_image}" --name "${c1}"
+kind load docker-image "${controller_image}" "${coredns_image}" --name "${c2}"
+
+echo "Configuring CoreDNS"
+function update_coredns() {
+  kubectl --kubeconfig ${1} patch clusterrole system:coredns --type json --patch-file coredns-rbac.json
+  kubectl --kubeconfig ${1} get configmap -n kube-system coredns -o yaml | \
+    sed -E -e 's/^(\s*)kubernetes.*cluster\.local.*$/\1multicluster clusterset.local\n&/' | \
+    kubectl --kubeconfig ${1} replace -f-
+  kubectl --kubeconfig ${1} rollout restart deploy -n kube-system coredns
+}
+update_coredns ${kubeconfig1}
+update_coredns ${kubeconfig2}
 
 function pod_cidrs() {
   kubectl --kubeconfig "${1}" get nodes -o jsonpath='{range .items[*]}{.spec.podCIDR}{"\n"}'
