@@ -18,12 +18,15 @@ package e2etest
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"math/rand"
 	"os"
 	"strconv"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/kubernetes/scheme"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
@@ -31,8 +34,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 	mcsclient "sigs.k8s.io/mcs-api/pkg/client/clientset/versioned"
 )
 
@@ -106,4 +111,41 @@ func execCmd(k8s kubernetes.Interface, config *restclient.Config, podName string
 		return []byte{}, []byte{}, err
 	}
 	return stdout.Bytes(), stderr.Bytes(), nil
+}
+
+func exportService(ctx context.Context, fromCluster, toCluster clusterClients, namespace string, svcName string) {
+	_, err := fromCluster.mcs.MulticlusterV1alpha1().ServiceExports(namespace).Create(ctx, &v1alpha1.ServiceExport{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: svcName,
+		},
+	}, metav1.CreateOptions{})
+	Expect(err).ToNot(HaveOccurred())
+	var slices *discoveryv1.EndpointSliceList
+	Eventually(func() int {
+		eps := 0
+		slices, err = fromCluster.k8s.DiscoveryV1().EndpointSlices(namespace).List(ctx, metav1.ListOptions{
+			LabelSelector: labels.Set{discoveryv1.LabelServiceName: svcName}.AsSelector().String(),
+		})
+		Expect(err).ToNot(HaveOccurred())
+		for _, s := range slices.Items {
+			eps += len(s.Endpoints)
+		}
+		return eps
+	}, 30).Should(Equal(1))
+	importedSlice := slices.Items[0] // This direct indexing is ok because we just asserted above that there is exactly one element here
+	importedSlice.ObjectMeta = metav1.ObjectMeta{
+		GenerateName: svcName + "-",
+		Labels: map[string]string{
+			v1alpha1.LabelServiceName: svcName,
+		},
+	}
+
+	createdSlice, err := toCluster.k8s.DiscoveryV1().EndpointSlices(namespace).Create(ctx, &importedSlice, metav1.CreateOptions{})
+	Expect(err).ToNot(HaveOccurred())
+
+	Eventually(func() string {
+		updatedSlice, err := toCluster.k8s.DiscoveryV1().EndpointSlices(namespace).Get(ctx, createdSlice.Name, metav1.GetOptions{})
+		Expect(err).ToNot(HaveOccurred())
+		return updatedSlice.Labels[discoveryv1.LabelServiceName]
+	}).ShouldNot(BeEmpty())
 }
