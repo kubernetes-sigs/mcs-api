@@ -5,3 +5,9 @@ networking:
   serviceSubnet: "10.11.0.0/16"
 nodes:
 - role: control-plane
+  kubeadmConfigPatches:
+    - |
+      kind: ClusterConfiguration
+      dns:
+        imageRepository: multicluster
+        imageTag: latest

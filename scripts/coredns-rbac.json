@@ -1,0 +1,18 @@
+[
+  {
+    "op": "add",
+    "path": "/rules/-",
+    "value": {
+      "apiGroups": [
+        "multicluster.x-k8s.io"
+      ],
+      "resources": [
+        "serviceimports"
+      ],
+      "verbs": [
+        "list",
+        "watch"
+      ]
+    }
+  }
+]
