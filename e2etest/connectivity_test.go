@@ -27,8 +27,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
@@ -205,74 +203,39 @@ var _ = Describe("Connectivity", func() {
 			LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
 		})
 		Expect(err).ToNot(HaveOccurred())
-		var slicesv1 *discoveryv1.EndpointSliceList
-		var slicesv1b1 *discoveryv1beta1.EndpointSliceList
+		var slices *discoveryv1.EndpointSliceList
 		Eventually(func() int {
 			eps := 0
-			slicesv1, err = cluster2.k8s.DiscoveryV1().EndpointSlices(namespace).List(ctx, metav1.ListOptions{
+			slices, err = cluster2.k8s.DiscoveryV1().EndpointSlices(namespace).List(ctx, metav1.ListOptions{
 				LabelSelector: labels.Set{discoveryv1.LabelServiceName: helloService.Name}.AsSelector().String(),
 			})
-			if err != nil && errors.IsNotFound(err) {
-				slicesv1b1, err = cluster2.k8s.DiscoveryV1beta1().EndpointSlices(namespace).List(ctx, metav1.ListOptions{
-					LabelSelector: labels.Set{discoveryv1beta1.LabelServiceName: helloService.Name}.AsSelector().String(),
-				})
-				Expect(err).ToNot(HaveOccurred())
-				for _, s := range slicesv1b1.Items {
-					eps += len(s.Endpoints)
-				}
-			} else {
-				Expect(err).ToNot(HaveOccurred())
-				for _, s := range slicesv1.Items {
-					eps += len(s.Endpoints)
-				}
+			Expect(err).ToNot(HaveOccurred())
+			for _, s := range slices.Items {
+				eps += len(s.Endpoints)
 			}
 			return eps
 		}, 30).Should(Equal(1))
-		if slicesv1b1 != nil {
-			importedSlice := slicesv1b1.Items[0]
-			importedSlice.ObjectMeta = metav1.ObjectMeta{
-				Name: importedSlice.Name,
-				Labels: map[string]string{
-					v1alpha1.LabelServiceName: helloServiceImport.Name,
-				},
-			}
-			_, err = cluster1.k8s.DiscoveryV1beta1().EndpointSlices(namespace).Create(ctx, &importedSlice, metav1.CreateOptions{})
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(func() []string {
-				svcImport, err := cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Get(ctx, helloServiceImport.Name, metav1.GetOptions{})
-				Expect(err).ToNot(HaveOccurred())
-				return svcImport.Spec.IPs
-			}).ShouldNot(BeEmpty())
-			serviceImport, err = cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Get(ctx, helloServiceImport.Name, metav1.GetOptions{})
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(func() string {
-				updatedSlice, err := cluster1.k8s.DiscoveryV1beta1().EndpointSlices(namespace).Get(ctx, importedSlice.Name, metav1.GetOptions{})
-				Expect(err).ToNot(HaveOccurred())
-				return updatedSlice.Labels[discoveryv1beta1.LabelServiceName]
-			}).ShouldNot(BeEmpty())
-		} else {
-			importedSlice := slicesv1.Items[0]
-			importedSlice.ObjectMeta = metav1.ObjectMeta{
-				Name: importedSlice.Name,
-				Labels: map[string]string{
-					v1alpha1.LabelServiceName: helloServiceImport.Name,
-				},
-			}
-			_, err = cluster1.k8s.DiscoveryV1().EndpointSlices(namespace).Create(ctx, &importedSlice, metav1.CreateOptions{})
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(func() []string {
-				svcImport, err := cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Get(ctx, helloServiceImport.Name, metav1.GetOptions{})
-				Expect(err).ToNot(HaveOccurred())
-				return svcImport.Spec.IPs
-			}).ShouldNot(BeEmpty())
-			serviceImport, err = cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Get(ctx, helloServiceImport.Name, metav1.GetOptions{})
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(func() string {
-				updatedSlice, err := cluster1.k8s.DiscoveryV1().EndpointSlices(namespace).Get(ctx, importedSlice.Name, metav1.GetOptions{})
-				Expect(err).ToNot(HaveOccurred())
-				return updatedSlice.Labels[discoveryv1beta1.LabelServiceName]
-			}).ShouldNot(BeEmpty())
+		importedSlice := slices.Items[0]
+		importedSlice.ObjectMeta = metav1.ObjectMeta{
+			Name: importedSlice.Name,
+			Labels: map[string]string{
+				v1alpha1.LabelServiceName: helloServiceImport.Name,
+			},
 		}
+		_, err = cluster1.k8s.DiscoveryV1().EndpointSlices(namespace).Create(ctx, &importedSlice, metav1.CreateOptions{})
+		Expect(err).ToNot(HaveOccurred())
+		Eventually(func() []string {
+			svcImport, err := cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Get(ctx, helloServiceImport.Name, metav1.GetOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			return svcImport.Spec.IPs
+		}).ShouldNot(BeEmpty())
+		serviceImport, err = cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Get(ctx, helloServiceImport.Name, metav1.GetOptions{})
+		Expect(err).ToNot(HaveOccurred())
+		Eventually(func() string {
+			updatedSlice, err := cluster1.k8s.DiscoveryV1().EndpointSlices(namespace).Get(ctx, importedSlice.Name, metav1.GetOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			return updatedSlice.Labels[discoveryv1.LabelServiceName]
+		}).ShouldNot(BeEmpty())
 		reqPod, err = cluster1.k8s.CoreV1().Pods(namespace).Get(ctx, requestPod.Name, metav1.GetOptions{})
 		Expect(err).ToNot(HaveOccurred())
 		By("Created all in " + namespace)
