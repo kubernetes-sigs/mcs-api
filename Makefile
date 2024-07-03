@@ -22,7 +22,7 @@ IMG ?= mcs-api-controller:latest
 # Need v1 to support defaults in CRDs, unfortunately limiting us to k8s 1.16+
 CRD_OPTIONS ?= "crd:crdVersions=v1"
 
-CONTROLLER_GEN=go run sigs.k8s.io/controller-tools/cmd/controller-gen
+CONTROLLER_GEN=go -C tools run sigs.k8s.io/controller-tools/cmd/controller-gen
 # enable Go modules
 export GO111MODULE=on
 
@@ -60,12 +60,12 @@ vet:
 .PHONY: generate
 generate:
 	./hack/update-codegen.sh
-	$(CONTROLLER_GEN) object:headerFile=./hack/boilerplate.go.txt paths="./..."
+	$(CONTROLLER_GEN) object:headerFile=$(ROOT)/hack/boilerplate.go.txt paths="$(ROOT)/..."
 
 # Generate manifests e.g. CRD, RBAC etc.
 .PHONY: manifests
 manifests:
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=mcs-derived-service-manager webhook schemapatch:manifests="config/crd-base" paths="./..." output:crd:none output:schemapatch:dir="config/crd"
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=mcs-derived-service-manager output:rbac:dir="$(ROOT)/config/rbac" webhook schemapatch:manifests="$(ROOT)/config/crd-base" paths="$(ROOT)/..." output:crd:none output:schemapatch:dir="$(ROOT)/config/crd"
 
 # Run tests
 .PHONY: test
