@@ -34,9 +34,14 @@ CLIENTSET_PKG_NAME=clientset
 
 if [[ "${VERIFY_CODEGEN:-}" == "true" ]]; then
   echo "Running in verification mode"
-  VERIFY_FLAG="--verify-only"
+  ORIG_OUTPUT_DIR="$OUTPUT_DIR"
+  OUTPUT_DIR=$(mktemp -d)
+  trap "rm -rf $OUTPUT_DIR" EXIT
+else
+  # Clear existing code before re-generating it
+  rm -rf "$OUTPUT_DIR"
 fi
-COMMON_FLAGS="${VERIFY_FLAG:-} --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt"
+COMMON_FLAGS="--go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt"
 
 echo "Generating clientset at ${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}"
 "${gobin}/client-gen" --clientset-name "${CLIENTSET_NAME}" --input-base "" --input "${FQ_APIS}" --output-pkg "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}" --output-dir "$OUTPUT_DIR/$CLIENTSET_PKG_NAME" ${COMMON_FLAGS}
@@ -55,3 +60,7 @@ echo "Generating informers at ${OUTPUT_PKG}/informers"
 
 echo "Generating register at ${FQ_APIS}"
 "${gobin}/register-gen" ${FQ_APIS} --output-file zz_generated.register.go ${COMMON_FLAGS}
+
+if [[ "${VERIFY_CODEGEN:-}" == "true" ]]; then
+  diff -urN "$ORIG_OUTPUT_DIR" "$OUTPUT_DIR"
+fi
