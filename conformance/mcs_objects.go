@@ -15,14 +15,3 @@ limitations under the License.
 */
 
 package conformance
-
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
-)
-
-var helloServiceExport = v1alpha1.ServiceExport{
-	ObjectMeta: metav1.ObjectMeta{
-		Name: "hello",
-	},
-}
