@@ -23,7 +23,7 @@ DIFFROOT="${SCRIPT_ROOT}/config"
 TMP_DIFFROOT="${SCRIPT_ROOT}/_tmp/config"
 _tmp="${SCRIPT_ROOT}/_tmp"
 # The controller-gen command for generating CRDs from API definitions.
-CONTROLLER_GEN="go run sigs.k8s.io/controller-tools/cmd/controller-gen"
+CONTROLLER_GEN="go -C tools run sigs.k8s.io/controller-tools/cmd/controller-gen"
 # Need v1 to support defaults in CRDs, unfortunately limiting us to k8s 1.16+
 CRD_OPTIONS="crd:crdVersions=v1"
 
