@@ -67,7 +67,8 @@ var _ = Describe("Connectivity to remote services", func() {
 	})
 
 	Context("with no exported service", func() {
-		It("should be inaccessible", Label("core"), func() {
+		It("should be inaccessible", Label(RequiredLabel), func() {
+			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#exporting-services")
 			By("attempting to access the remote service", func() {
 				By("issuing a request from all clusters", func() {
 					// Run on all clusters
@@ -85,8 +86,8 @@ var _ = Describe("Connectivity to remote services", func() {
 	})
 
 	Context("with an exported service", func() {
-		It("should be accessible through DNS (after a potential delay)", Label("optional"), func() {
-			AddReportEntry("spec", "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#dns")
+		It("should be accessible through DNS (after a potential delay)", Label(OptionalLabel), func() {
+			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#dns")
 			By("exporting the service", func() {
 				// On the "remote" cluster
 				_, err := clients[0].mcs.MulticlusterV1alpha1().ServiceExports(namespace).Create(ctx,

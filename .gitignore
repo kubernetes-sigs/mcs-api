@@ -48,4 +48,5 @@ Session.vim
 !vendor/**/zz_generated.*
 .vscode
 /www/test_out
+report.html
 .*.timestamp
