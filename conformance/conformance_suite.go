@@ -18,7 +18,6 @@ package conformance
 
 import (
 	"flag"
-	"math/rand"
 	"strings"
 	"testing"
 
@@ -53,8 +52,6 @@ func init() {
 }
 
 var _ = BeforeSuite(func() {
-	rand.Seed(GinkgoRandomSeed())
-
 	Expect(setupClients()).To(Succeed())
 })
 
