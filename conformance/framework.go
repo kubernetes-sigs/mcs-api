@@ -51,28 +51,30 @@ func AwaitUntil(opMsg string, doOperation DoOperationFunc, checkResult CheckResu
 func AwaitResultOrError(opMsg string, doOperation DoOperationFunc, checkResult CheckResultFunc) (interface{}, string, error) {
 	var finalResult interface{}
 	var lastMsg string
-	err := wait.PollImmediate(5*time.Second, 10*time.Second, func() (bool, error) {
-		result, err := doOperation()
-		if err != nil {
-			if IsTransientError(err, opMsg) {
-				return false, nil
+
+	err := wait.PollUntilContextTimeout(context.Background(), 500*time.Millisecond,
+		10*time.Second, true, func(_ context.Context) (bool, error) {
+			result, err := doOperation()
+			if err != nil {
+				if IsTransientError(err, opMsg) {
+					return false, nil
+				}
+				return false, err
 			}
-			return false, err
-		}
 
-		ok, msg, err := checkResult(result)
-		if err != nil {
-			return false, err
-		}
+			ok, msg, err := checkResult(result)
+			if err != nil {
+				return false, err
+			}
 
-		if ok {
-			finalResult = result
-			return true, nil
-		}
+			if ok {
+				finalResult = result
+				return true, nil
+			}
 
-		lastMsg = msg
-		return false, nil
-	})
+			lastMsg = msg
+			return false, nil
+		})
 
 	errMsg := ""
 	if err != nil {
