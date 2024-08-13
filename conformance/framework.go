@@ -112,12 +112,18 @@ func execCmd(k8s kubernetes.Interface, config *rest.Config, podName string, podN
 		Stderr:  true,
 		TTY:     true,
 	}, scheme.ParameterCodec)
+
 	exec, err := remotecommand.NewSPDYExecutor(config, "POST", req.URL())
 	if err != nil {
 		return []byte{}, []byte{}, err
 	}
+
 	var stdout, stderr bytes.Buffer
-	err = exec.Stream(remotecommand.StreamOptions{
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdin:  nil,
 		Stdout: &stdout,
 		Stderr: &stderr,
@@ -125,6 +131,7 @@ func execCmd(k8s kubernetes.Interface, config *rest.Config, podName string, podN
 	if err != nil {
 		return []byte{}, []byte{}, err
 	}
+
 	return stdout.Bytes(), stderr.Bytes(), nil
 }
 
