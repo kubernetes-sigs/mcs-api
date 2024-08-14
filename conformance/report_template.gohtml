@@ -20,16 +20,18 @@
 <table>
     <thead>
         <tr>
-            <th>Result</th>
+            <th>Conformant</th>
             <th>Description</th>
         </tr>
     </thead>
     {{range .Tests}}
     <tr>
-        {{ if .Pass }}
-        <td style="color:green">Pass</td>
+        {{ if .Failed }}
+            <td style="color:gray">Unknown{{.Message}}</td>
+        {{ else if .Conformant }}
+            <td style="color:green">Yes{{.Message}}</td>
         {{ else }}
-        <td style="color:red">Fail</td>
+            <td style="color:red">No{{.Message}}</td>
         {{end}}
         <td><a href="{{.Ref}}">{{.Desc}}</a></td>
     </tr>
