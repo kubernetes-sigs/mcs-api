@@ -17,7 +17,8 @@ limitations under the License.
 package conformance
 
 import (
-	"fmt"
+	_ "embed"
+	"html/template"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -25,48 +26,76 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type testWithRef struct {
-	test string
-	refs []string
+const (
+	OptionalLabel      = "Optional"
+	RequiredLabel      = "Required"
+	SpecRefReportEntry = "spec-ref"
+)
+
+//go:embed report_template.gohtml
+var reportHTML string
+
+type testInfo struct {
+	Desc string
+	Ref  string
+	Pass bool
+}
+
+type testGrouping struct {
+	Name  string
+	Tests []testInfo
 }
 
 var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
-	out, err := os.Create("report.txt")
-	Expect(err).To(Succeed())
-
-	passed := make(map[string][]testWithRef)
-	failed := make(map[string][]testWithRef)
+	testGroupMap := map[string]*testGrouping{}
 
 	for _, specReport := range report.SpecReports {
-		var target *map[string][]testWithRef
-		if specReport.State == types.SpecStatePassed {
-			target = &passed
-		} else {
-			target = &failed
+		if specReport.LeafNodeType != types.NodeTypeIt || specReport.State == types.SpecStatePending ||
+			specReport.State == types.SpecStateSkipped {
+			continue
 		}
+
 		for _, label := range specReport.Labels() {
-			existing := (*target)[label]
-			reportEntries := specReport.ReportEntries
-			refs := []string{}
-			for _, reportEntry := range reportEntries {
-				refs = append(refs, reportEntry.GetRawValue().(string))
+			if testGroupMap[label] == nil {
+				testGroupMap[label] = &testGrouping{
+					Name: label,
+				}
 			}
 
-			(*target)[label] = append(existing, testWithRef{test: specReport.FullText(), refs: refs})
+			ref := ""
+			for i := range specReport.ReportEntries {
+				if specReport.ReportEntries[i].Name == SpecRefReportEntry {
+					ref = specReport.ReportEntries[i].GetRawValue().(string)
+					break
+				}
+			}
+
+			testGroupMap[label].Tests = append(testGroupMap[label].Tests, testInfo{
+				Desc: specReport.FullText(),
+				Ref:  ref,
+				Pass: specReport.State == types.SpecStatePassed,
+			})
 		}
 	}
 
-	for label, tests := range passed {
-		fmt.Fprintf(out, "The implementation meets the following %s requirements:\n", label)
-		for _, test := range tests {
-			fmt.Fprintf(out, "⋅ %s (%v)\n", test.test, test.refs)
-		}
+	var testGroups []testGrouping
+
+	for _, g := range testGroupMap {
+		testGroups = append(testGroups, *g)
 	}
 
-	for label, tests := range failed {
-		fmt.Fprintf(out, "The implementation fails the following %s requirements:\n", label)
-		for _, test := range tests {
-			fmt.Fprintf(out, "⋅ %s (%v)\n", test.test, test.refs)
-		}
+	data := struct {
+		Groups []testGrouping
+	}{
+		testGroups,
 	}
+
+	out, err := os.Create("report.html")
+	Expect(err).To(Succeed())
+
+	tmpl, err := template.New("report").Parse(reportHTML)
+	Expect(err).To(Succeed())
+
+	err = tmpl.Execute(out, data)
+	Expect(err).To(Succeed())
 })
