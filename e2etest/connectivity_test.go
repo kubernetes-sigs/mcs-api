@@ -149,16 +149,38 @@ var _ = Describe("Connectivity", func() {
 
 		ctx           = context.Background()
 		serviceImport *v1alpha1.ServiceImport
-		pods          *v1.PodList
+		podIPs        []string
 		reqPod        *v1.Pod
 
-		checkPodReachable = func(command []string) {
-			Eventually(func(g Gomega) {
-				stdout, _, err := execCmd(cluster1.k8s, restcfg1, reqPod.Name, reqPod.Namespace, command)
-				g.Expect(err).ToNot(HaveOccurred())
-				ip := strings.TrimSpace(string(stdout))
-				g.Expect(ip).To(Equal(pods.Items[0].Status.PodIP))
-			}, "5m").MustPassRepeatedly(50).Should(Succeed())
+		verifyConnectivity = func() {
+			checkPodReachable := func(command []string) {
+				ips := map[string]int{}
+				Eventually(func(g Gomega) {
+					stdout, _, err := execCmd(cluster1.k8s, restcfg1, reqPod.Name, reqPod.Namespace, command)
+					g.Expect(err).ToNot(HaveOccurred())
+					ip := strings.TrimSpace(string(stdout))
+					g.Expect(ip).To(BeElementOf(podIPs))
+					ips[ip]++
+				}, "5m").MustPassRepeatedly(50).Should(Succeed())
+				Expect(ips).To(HaveEach(Not(BeZero())))
+			}
+
+			Specify("UDP connects across clusters using the VIP", func() {
+				command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc -uw1 %s 42", serviceImport.Spec.IPs[0])}
+				checkPodReachable(command)
+			})
+			Specify("TCP connects across clusters using the VIP", func() {
+				command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s 42", serviceImport.Spec.IPs[0])}
+				checkPodReachable(command)
+			})
+			Specify("UDP connects across clusters using the DNS name", func() {
+				command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc -uw1 %s.%s.svc.clusterset.local 42", serviceImport.Name, serviceImport.Namespace)}
+				checkPodReachable(command)
+			})
+			Specify("TCP connects across clusters using the DNS name", func() {
+				command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42", serviceImport.Name, serviceImport.Namespace)}
+				checkPodReachable(command)
+			})
 		}
 	)
 	BeforeEach(func() {
@@ -198,10 +220,13 @@ var _ = Describe("Connectivity", func() {
 			}
 			return ""
 		}, 30).ShouldNot(BeEmpty())
-		pods, err = cluster2.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		pods, err := cluster2.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 			LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
 		})
 		Expect(err).ToNot(HaveOccurred())
+		for _, pod := range pods.Items {
+			podIPs = append(podIPs, pod.Status.PodIP)
+		}
 
 		exportService(ctx, cluster2, cluster1, namespace, svc.Name)
 
@@ -227,20 +252,39 @@ var _ = Describe("Connectivity", func() {
 		Expect(cluster1.k8s.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})).To(Succeed())
 		Expect(cluster2.k8s.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})).To(Succeed())
 	})
-	Specify("UDP connects across clusters using the VIP", func() {
-		command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc -uw1 %s 42", serviceImport.Spec.IPs[0])}
-		checkPodReachable(command)
+
+	When("trying to reach a service exported from only the remote cluster", func() {
+		verifyConnectivity()
 	})
-	Specify("TCP connects across clusters using the VIP", func() {
-		command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s 42", serviceImport.Spec.IPs[0])}
-		checkPodReachable(command)
-	})
-	Specify("UDP connects across clusters using the DNS name", func() {
-		command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc -uw1 %s.%s.svc.clusterset.local 42", serviceImport.Name, serviceImport.Namespace)}
-		checkPodReachable(command)
-	})
-	Specify("TCP connects across clusters using the DNS name", func() {
-		command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42", serviceImport.Name, serviceImport.Namespace)}
-		checkPodReachable(command)
+
+	When("trying to reach a service exported by both the local and remote clusters", func() {
+		BeforeEach(func() {
+			dep := helloDeployment
+			_, err := cluster1.k8s.AppsV1().Deployments(namespace).Create(ctx, &dep, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			svc := helloService
+			_, err = cluster1.k8s.CoreV1().Services(namespace).Create(ctx, &svc, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() string {
+				pods, err := cluster1.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+					LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
+				})
+				Expect(err).ToNot(HaveOccurred())
+				if len(pods.Items) > 0 {
+					return pods.Items[0].Status.PodIP
+				}
+				return ""
+			}, 30).ShouldNot(BeEmpty())
+			pods, err := cluster1.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+				LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
+			})
+			Expect(err).ToNot(HaveOccurred())
+			for _, pod := range pods.Items {
+				podIPs = append(podIPs, pod.Status.PodIP)
+			}
+			exportService(ctx, cluster1, cluster1, namespace, svc.Name)
+		})
+
+		verifyConnectivity()
 	})
 })
