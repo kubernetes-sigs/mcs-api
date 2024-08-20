@@ -43,6 +43,10 @@ var helloService = v1.Service{
 				Protocol: v1.ProtocolUDP,
 			},
 		},
+		SessionAffinity: v1.ServiceAffinityClientIP,
+		SessionAffinityConfig: &v1.SessionAffinityConfig{
+			ClientIP: &v1.ClientIPConfig{TimeoutSeconds: ptr.To(int32(10))},
+		},
 	},
 }
 
