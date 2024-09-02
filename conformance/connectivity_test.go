@@ -77,7 +77,7 @@ var _ = Describe("Connectivity to remote services", func() {
 						for i := 0; i < 20; i++ {
 							command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42", helloService.Name, namespace)}
 							stdout, _, _ := execCmd(client.k8s, client.rest, requestPod.Name, namespace, command)
-							Expect(string(stdout)).NotTo(ContainSubstring("pod ip"))
+							Expect(string(stdout)).NotTo(ContainSubstring("pod ip"), reportNonConformant(""))
 						}
 					}
 				})
@@ -101,7 +101,7 @@ var _ = Describe("Connectivity to remote services", func() {
 					Eventually(func() string {
 						stdout, _, _ := execCmd(client.k8s, client.rest, requestPod.Name, namespace, command)
 						return string(stdout)
-					}, 20, 1).Should(ContainSubstring("pod ip"))
+					}, 20, 1).Should(ContainSubstring("pod ip"), reportNonConformant(""))
 				}
 			})
 		})
