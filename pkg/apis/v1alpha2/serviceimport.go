@@ -92,10 +92,33 @@ const (
 
 // ClusterStatus contains service configuration mapped to a specific source cluster
 type ClusterStatus struct {
-	// cluster is the name of the exporting cluster. Must be a valid RFC-1123 DNS
-	// label.
-	Cluster string `json:"cluster"`
+	// cluster is the name of the exporting cluster.
+	Cluster ClusterName `json:"cluster"`
 }
+
+// ClusterName is the name of a cluster from which a service has been exported.
+// Must be a valid RFC-1123 DNS label, which must consist of lower case
+// alphanumeric characters, '-' or '.', and must start and end with an
+// alphanumeric character.
+//
+// This validation is based off of the corresponding Kubernetes validation:
+// https://github.com/kubernetes/apimachinery/blob/02cfb53916346d085a6c6c7c66f882e3c6b0eca6/pkg/util/validation/validation.go#L208
+//
+// Valid values include:
+//
+// * "example"
+// * "example-01"
+// * "01-example.com"
+// * "foo.example.com"
+//
+// Invalid values include:
+//
+// * "example.com/bar" - "/" is an invalid character
+//
+// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=253
+type ClusterName string
 
 // +kubebuilder:object:root=true
 
