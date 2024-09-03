@@ -24,48 +24,29 @@ import (
 // +genclient
 // +kubebuilder:object:root=true
 
-// ServiceImport describes a service imported from clusters in a ClusterSet.
+// ServiceImport describes a service imported from clusters in a ClusterSet and
+// the information necessary to consume it. ServiceImport is managed by an MCS
+// controller and should be updated automatically to show derived state as IP
+// addresses or ServiceExport resources change.
 type ServiceImport struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// spec defines the behavior of a ServiceImport.
-	// +optional
-	Spec ServiceImportSpec `json:"spec,omitempty"`
-	// status contains information about the exported services that form
-	// the multi-cluster service referenced by this ServiceImport.
-	// +optional
-	Status ServiceImportStatus `json:"status,omitempty"`
-}
-
-// ServiceImportType designates the type of a ServiceImport
-type ServiceImportType string
-
-const (
-	// ClusterSetIP services are only accessible via the ClusterSet IP.
-	ClusterSetIP ServiceImportType = "ClusterSetIP"
-	// Headless services allow backend pods to be addressed directly.
-	Headless ServiceImportType = "Headless"
-)
-
-// ServiceImportSpec describes an imported service and the information necessary to consume it.
-type ServiceImportSpec struct{}
-
-// ServiceImportStatus describes derived state of an imported service.
-type ServiceImportStatus struct {
 	// +listType=atomic
 	Ports []v1.ServicePort `json:"ports"`
 	// ips will be used as the VIP(s) for this service when type is ClusterSetIP.
-	// +kubebuilder:validation:MaxItems:=1
+	// +kubebuilder:validation:MaxItems:=2
 	// +optional
 	IPs []string `json:"ips,omitempty"`
 	// type defines the type of this service.
 	// Must be "ClusterSetIP" or "Headless".
 	// The "ClusterSetIP" type reflects exported Service(s) with type ClusterIP
 	// and the "Headless" type reflects exported Service(s) with type Headless.
-	// A ServiceImport with type ClusterSetIP SHOULD populate `.status.ips`
+	// A ServiceImport with type ClusterSetIP SHOULD populate `.ips`
 	// with virtual IP address(es) where the service can be reached from within
-	// the importing cluster.
+	// the importing cluster. These addresses MAY be endpoints directly reachable
+	// over a "flat" network between clusters, or MAY direct traffic through
+	// topology such as an intermediate east-west gateway.
 	// If exported Services of the same name and namespace in a given ClusterSet
 	// have differing types, a "Conflict" status condition SHOULD be reported in
 	// ServiceExport status.
@@ -98,6 +79,16 @@ type ServiceImportStatus struct {
 	// +listMapKey=cluster
 	Clusters []ClusterStatus `json:"clusters,omitempty"`
 }
+
+// ServiceImportType designates the type of a ServiceImport
+type ServiceImportType string
+
+const (
+	// ClusterSetIP services are only accessible via the ClusterSet IP.
+	ClusterSetIP ServiceImportType = "ClusterSetIP"
+	// Headless services allow backend pods to be addressed directly.
+	Headless ServiceImportType = "Headless"
+)
 
 // ClusterStatus contains service configuration mapped to a specific source cluster
 type ClusterStatus struct {
