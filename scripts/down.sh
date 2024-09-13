@@ -16,6 +16,10 @@
 
 set -e
 
+kind() {
+  go run sigs.k8s.io/kind "$@"
+}
+
 c1=${CLUSTER1:-c1}
 c2=${CLUSTER2:-c2}
 

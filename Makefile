@@ -84,7 +84,7 @@ uninstall:
 # Run static analysis.
 .PHONY: verify
 verify:
-	./hack/verify-all.sh
+	./hack/verify-all.sh -v
 
 # Build docker containers
 .PHONY: docker-build
