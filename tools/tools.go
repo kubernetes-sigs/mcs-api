@@ -23,6 +23,7 @@ limitations under the License.
 package tools
 
 import (
+	_ "golang.org/x/lint/golint"
 	_ "k8s.io/code-generator/cmd/client-gen"
 	_ "k8s.io/code-generator/cmd/deepcopy-gen"
 	_ "k8s.io/code-generator/cmd/informer-gen"

@@ -3,6 +3,7 @@ module github.com/kubernetes-sigs/mcs-api/tools
 go 1.22.4
 
 require (
+	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
 	k8s.io/code-generator v0.30.2
 	sigs.k8s.io/controller-tools v0.15.0
 )

@@ -22,11 +22,10 @@ KUBE_ROOT=$(dirname "${BASH_SOURCE}")/..
 
 cd "${KUBE_ROOT}"
 
-GOLINT=${GOLINT:-"golint"}
 PACKAGES=($(go list ./... | grep -v /vendor/))
 bad_files=()
 for package in "${PACKAGES[@]}"; do
-  out=$("${GOLINT}" -min_confidence=0.9 "${package}" | grep -v -E '(should not use dot imports)' || :)
+  out=$(go -C tools run golang.org/x/lint/golint -min_confidence=0.9 "${package}" | grep -v -E '(should not use dot imports)' || :)
   if [[ -n "${out}" ]]; then
     bad_files+=("${out}")
   fi
