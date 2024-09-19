@@ -65,7 +65,7 @@ var helloDeployment = appsv1.Deployment{
 				Containers: []v1.Container{
 					{
 						Name:  "hello-tcp",
-						Image: "alpine/socat",
+						Image: "alpine/socat:1.7.4.4",
 						Args:  []string{"-v", "-v", "TCP-LISTEN:42,crlf,reuseaddr,fork", "SYSTEM:echo pod ip $(MY_POD_IP)"},
 						Env: []v1.EnvVar{
 							{
@@ -80,7 +80,7 @@ var helloDeployment = appsv1.Deployment{
 					},
 					{
 						Name:  "hello-udp",
-						Image: "alpine/socat",
+						Image: "alpine/socat:1.7.4.4",
 						Args:  []string{"-v", "-v", "UDP-LISTEN:42,crlf,reuseaddr,fork", "SYSTEM:echo pod ip $(MY_POD_IP)"},
 						Env: []v1.EnvVar{
 							{
