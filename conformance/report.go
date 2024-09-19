@@ -35,6 +35,8 @@ import (
 const (
 	OptionalLabel            = "Optional"
 	RequiredLabel            = "Required"
+	DNSLabel                 = "DNS"
+	ClusterIPLabel           = "ClusterIP"
 	SpecRefReportEntry       = "spec-ref"
 	NonConformantReportEntry = "non-conformant"
 )
