@@ -17,15 +17,27 @@ limitations under the License.
 package conformance
 
 import (
+	"cmp"
+	"context"
+	"errors"
 	"flag"
+	"fmt"
+	"math/rand"
+	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 	mcsclient "sigs.k8s.io/mcs-api/pkg/client/clientset/versioned"
 )
 
@@ -38,6 +50,7 @@ type clusterClients struct {
 var contexts string
 var clients []clusterClients
 var loadingRules *clientcmd.ClientConfigLoadingRules
+var ctx = context.TODO()
 
 func TestConformance(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -78,4 +91,95 @@ func setupClients() error {
 		clients[i] = clusterClients{k8s: k8sClient, mcs: mcsClient, rest: restConfig}
 	}
 	return nil
+}
+
+type testDriver struct {
+	namespace string
+}
+
+func newTestDriver() *testDriver {
+	t := &testDriver{}
+
+	BeforeEach(func() {
+		Expect(clients).ToNot(BeEmpty())
+
+		// Set up the shared namespace
+		t.namespace = fmt.Sprintf("mcs-conformance-%v", rand.Uint32())
+		for _, client := range clients {
+			_, err := client.k8s.CoreV1().Namespaces().Create(ctx, &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{Name: t.namespace},
+			}, metav1.CreateOptions{})
+			Expect(err).ToNot(HaveOccurred())
+		}
+
+		// Set up the remote service (the first cluster is considered to be the remote)
+		_, err := clients[0].k8s.AppsV1().Deployments(t.namespace).Create(ctx, &helloDeployment, metav1.CreateOptions{})
+		Expect(err).ToNot(HaveOccurred())
+		_, err = clients[0].k8s.CoreV1().Services(t.namespace).Create(ctx, &helloService, metav1.CreateOptions{})
+		Expect(err).ToNot(HaveOccurred())
+
+		// Start the request pod on all clusters
+		for _, client := range clients {
+			startRequestPod(ctx, client, t.namespace)
+		}
+	})
+
+	AfterEach(func() {
+		// Clean up the shared namespace
+		for _, client := range clients {
+			err := client.k8s.CoreV1().Namespaces().Delete(ctx, t.namespace, metav1.DeleteOptions{})
+			Expect(err).ToNot(HaveOccurred())
+		}
+	})
+
+	return t
+}
+
+func (t *testDriver) createServiceExport() {
+	_, err := clients[0].mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Create(ctx,
+		&v1alpha1.ServiceExport{ObjectMeta: metav1.ObjectMeta{Name: helloService.Name}}, metav1.CreateOptions{})
+	Expect(err).ToNot(HaveOccurred())
+}
+
+func (t *testDriver) awaitServiceImport(c *clusterClients, name string, verify func(*v1alpha1.ServiceImport) bool) *v1alpha1.ServiceImport {
+	var serviceImport *v1alpha1.ServiceImport
+
+	_ = wait.PollUntilContextTimeout(ctx, 200*time.Millisecond,
+		20*time.Second, true, func(ctx context.Context) (bool, error) {
+			si, err := c.mcs.MulticlusterV1alpha1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
+			if apierrors.IsNotFound(err) || errors.Is(err, context.DeadlineExceeded) {
+				return false, nil
+			}
+
+			Expect(err).ToNot(HaveOccurred(), "Error retrieving ServiceImport")
+
+			serviceImport = si
+
+			return verify == nil || verify(serviceImport), nil
+		})
+
+	return serviceImport
+}
+
+func toMCSPorts(from []v1.ServicePort) []v1alpha1.ServicePort {
+	var mcsPorts []v1alpha1.ServicePort
+
+	for _, port := range from {
+		mcsPorts = append(mcsPorts, v1alpha1.ServicePort{
+			Name:        port.Name,
+			Protocol:    port.Protocol,
+			Port:        port.Port,
+			AppProtocol: port.AppProtocol,
+		})
+	}
+
+	return sortMCSPorts(mcsPorts)
+}
+
+func sortMCSPorts(p []v1alpha1.ServicePort) []v1alpha1.ServicePort {
+	slices.SortFunc(p, func(a, b v1alpha1.ServicePort) int {
+		return cmp.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
+	})
+
+	return p
 }

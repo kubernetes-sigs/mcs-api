@@ -132,10 +132,10 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 		}
 	}
 
-	testGroups := make([]testGrouping, len(testGroupMap))
-	for i, l := range reportingLabels {
+	testGroups := []testGrouping{}
+	for _, l := range reportingLabels {
 		if testGroupMap[l] != nil {
-			testGroups[i] = *testGroupMap[l]
+			testGroups = append(testGroups, *testGroupMap[l])
 		}
 	}
 
