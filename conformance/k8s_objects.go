@@ -18,80 +18,86 @@ package conformance
 
 import (
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 )
 
-var helloService = v1.Service{
-	ObjectMeta: metav1.ObjectMeta{
-		Name: "hello",
-	},
-	Spec: v1.ServiceSpec{
-		Selector: map[string]string{
-			"app": "hello",
+const helloServiceName = "hello"
+
+func newHelloService() *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: helloServiceName,
 		},
-		Ports: []v1.ServicePort{
-			{
-				Name:     "tcp",
-				Port:     42,
-				Protocol: v1.ProtocolTCP,
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"app": helloServiceName,
 			},
-			{
-				Name:     "udp",
-				Port:     42,
-				Protocol: v1.ProtocolUDP,
+			Ports: []corev1.ServicePort{
+				{
+					Name:     "tcp",
+					Port:     42,
+					Protocol: corev1.ProtocolTCP,
+				},
+				{
+					Name:     "udp",
+					Port:     42,
+					Protocol: corev1.ProtocolUDP,
+				},
+			},
+			SessionAffinity: corev1.ServiceAffinityClientIP,
+			SessionAffinityConfig: &corev1.SessionAffinityConfig{
+				ClientIP: &corev1.ClientIPConfig{TimeoutSeconds: ptr.To(int32(10))},
 			},
 		},
-		SessionAffinity: v1.ServiceAffinityClientIP,
-		SessionAffinityConfig: &v1.SessionAffinityConfig{
-			ClientIP: &v1.ClientIPConfig{TimeoutSeconds: ptr.To(int32(10))},
-		},
-	},
+	}
 }
 
-var helloDeployment = appsv1.Deployment{
-	ObjectMeta: metav1.ObjectMeta{
-		Name: "hello",
-	},
-	Spec: appsv1.DeploymentSpec{
-		Replicas: ptr.To(int32(1)),
-		Selector: &metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				"app": "hello",
-			},
+func newHelloDeployment() *appsv1.Deployment {
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: helloServiceName,
 		},
-		Template: v1.PodTemplateSpec{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels: map[string]string{"app": "hello"},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: ptr.To(int32(1)),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": helloServiceName,
+				},
 			},
-			Spec: v1.PodSpec{
-				Containers: []v1.Container{
-					{
-						Name:  "hello-tcp",
-						Image: "alpine/socat:1.7.4.4",
-						Args:  []string{"-v", "-v", "TCP-LISTEN:42,crlf,reuseaddr,fork", "SYSTEM:echo pod ip $(MY_POD_IP)"},
-						Env: []v1.EnvVar{
-							{
-								Name: "MY_POD_IP",
-								ValueFrom: &v1.EnvVarSource{
-									FieldRef: &v1.ObjectFieldSelector{
-										FieldPath: "status.podIP",
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"app": helloServiceName},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "hello-tcp",
+							Image: "alpine/socat:1.7.4.4",
+							Args:  []string{"-v", "-v", "TCP-LISTEN:42,crlf,reuseaddr,fork", "SYSTEM:echo pod ip $(MY_POD_IP)"},
+							Env: []corev1.EnvVar{
+								{
+									Name: "MY_POD_IP",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "status.podIP",
+										},
 									},
 								},
 							},
 						},
-					},
-					{
-						Name:  "hello-udp",
-						Image: "alpine/socat:1.7.4.4",
-						Args:  []string{"-v", "-v", "UDP-LISTEN:42,crlf,reuseaddr,fork", "SYSTEM:echo pod ip $(MY_POD_IP)"},
-						Env: []v1.EnvVar{
-							{
-								Name: "MY_POD_IP",
-								ValueFrom: &v1.EnvVarSource{
-									FieldRef: &v1.ObjectFieldSelector{
-										FieldPath: "status.podIP",
+						{
+							Name:  "hello-udp",
+							Image: "alpine/socat:1.7.4.4",
+							Args:  []string{"-v", "-v", "UDP-LISTEN:42,crlf,reuseaddr,fork", "SYSTEM:echo pod ip $(MY_POD_IP)"},
+							Env: []corev1.EnvVar{
+								{
+									Name: "MY_POD_IP",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "status.podIP",
+										},
 									},
 								},
 							},
@@ -100,21 +106,23 @@ var helloDeployment = appsv1.Deployment{
 				},
 			},
 		},
-	},
+	}
 }
 
-var requestPod = v1.Pod{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:   "request",
-		Labels: map[string]string{"app": "request"},
-	},
-	Spec: v1.PodSpec{
-		Containers: []v1.Container{
-			{
-				Name:  "request",
-				Image: "busybox",
-				Args:  []string{"/bin/sh", "-ec", "while :; do echo '.'; sleep 5 ; done"},
+func newRequestPod() *corev1.Pod {
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "request",
+			Labels: map[string]string{"app": "request"},
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:  "request",
+					Image: "busybox",
+					Args:  []string{"/bin/sh", "-ec", "while :; do echo '.'; sleep 5 ; done"},
+				},
 			},
 		},
-	},
+	}
 }
