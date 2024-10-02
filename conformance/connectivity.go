@@ -36,8 +36,8 @@ var _ = Describe("Connectivity to remote services", func() {
 						// Repeat multiple times
 						for i := 0; i < 20; i++ {
 							command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42",
-								helloService.Name, t.namespace)}
-							stdout, _, _ := execCmd(client.k8s, client.rest, requestPod.Name, t.namespace, command)
+								t.helloService.Name, t.namespace)}
+							stdout, _, _ := execCmd(client.k8s, client.rest, t.requestPod.Name, t.namespace, command)
 							Expect(string(stdout)).NotTo(ContainSubstring("pod ip"), reportNonConformant(""))
 						}
 					}
@@ -51,15 +51,15 @@ var _ = Describe("Connectivity to remote services", func() {
 			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#dns")
 			By("exporting the service", func() {
 				// On the "remote" cluster
-				t.createServiceExport()
+				t.createServiceExport(&clients[0])
 			})
 			By("issuing a request from all clusters", func() {
 				// Run on all clusters
 				for _, client := range clients {
 					command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42",
-						helloService.Name, t.namespace)}
+						t.helloService.Name, t.namespace)}
 					Eventually(func() string {
-						stdout, _, _ := execCmd(client.k8s, client.rest, requestPod.Name, t.namespace, command)
+						stdout, _, _ := execCmd(client.k8s, client.rest, t.requestPod.Name, t.namespace, command)
 						return string(stdout)
 					}, 20, 1).Should(ContainSubstring("pod ip"), reportNonConformant(""))
 				}

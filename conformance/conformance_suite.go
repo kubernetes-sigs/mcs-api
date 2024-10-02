@@ -30,8 +30,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -94,33 +95,37 @@ func setupClients() error {
 }
 
 type testDriver struct {
-	namespace string
+	namespace    string
+	helloService *corev1.Service
+	requestPod   *corev1.Pod
 }
 
 func newTestDriver() *testDriver {
 	t := &testDriver{}
 
 	BeforeEach(func() {
+		t.namespace = fmt.Sprintf("mcs-conformance-%v", rand.Uint32())
+		t.helloService = newHelloService()
+		t.requestPod = newRequestPod()
+	})
+
+	JustBeforeEach(func() {
 		Expect(clients).ToNot(BeEmpty())
 
 		// Set up the shared namespace
-		t.namespace = fmt.Sprintf("mcs-conformance-%v", rand.Uint32())
 		for _, client := range clients {
-			_, err := client.k8s.CoreV1().Namespaces().Create(ctx, &v1.Namespace{
+			_, err := client.k8s.CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{Name: t.namespace},
 			}, metav1.CreateOptions{})
 			Expect(err).ToNot(HaveOccurred())
 		}
 
 		// Set up the remote service (the first cluster is considered to be the remote)
-		_, err := clients[0].k8s.AppsV1().Deployments(t.namespace).Create(ctx, &helloDeployment, metav1.CreateOptions{})
-		Expect(err).ToNot(HaveOccurred())
-		_, err = clients[0].k8s.CoreV1().Services(t.namespace).Create(ctx, &helloService, metav1.CreateOptions{})
-		Expect(err).ToNot(HaveOccurred())
+		t.deployHelloService(&clients[0], t.helloService)
 
 		// Start the request pod on all clusters
 		for _, client := range clients {
-			startRequestPod(ctx, client, t.namespace)
+			t.startRequestPod(ctx, client)
 		}
 	})
 
@@ -135,19 +140,29 @@ func newTestDriver() *testDriver {
 	return t
 }
 
-func (t *testDriver) createServiceExport() {
-	_, err := clients[0].mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Create(ctx,
-		&v1alpha1.ServiceExport{ObjectMeta: metav1.ObjectMeta{Name: helloService.Name}}, metav1.CreateOptions{})
+func (t *testDriver) createServiceExport(c *clusterClients) {
+	_, err := c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Create(ctx,
+		&v1alpha1.ServiceExport{ObjectMeta: metav1.ObjectMeta{Name: helloServiceName}}, metav1.CreateOptions{})
+	Expect(err).ToNot(HaveOccurred())
+}
+
+func (t *testDriver) deployHelloService(c *clusterClients, service *corev1.Service) {
+	_, err := c.k8s.AppsV1().Deployments(t.namespace).Create(ctx, newHelloDeployment(), metav1.CreateOptions{})
+	Expect(err).ToNot(HaveOccurred())
+	_, err = c.k8s.CoreV1().Services(t.namespace).Create(ctx, service, metav1.CreateOptions{})
 	Expect(err).ToNot(HaveOccurred())
 }
 
 func (t *testDriver) awaitServiceImport(c *clusterClients, name string, verify func(*v1alpha1.ServiceImport) bool) *v1alpha1.ServiceImport {
 	var serviceImport *v1alpha1.ServiceImport
 
-	_ = wait.PollUntilContextTimeout(ctx, 200*time.Millisecond,
+	_ = wait.PollUntilContextTimeout(ctx, 100*time.Millisecond,
 		20*time.Second, true, func(ctx context.Context) (bool, error) {
+			defer GinkgoRecover()
+
 			si, err := c.mcs.MulticlusterV1alpha1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
-			if apierrors.IsNotFound(err) || errors.Is(err, context.DeadlineExceeded) {
+			if apierrors.IsNotFound(err) || errors.Is(err, context.DeadlineExceeded) ||
+				(err != nil && strings.Contains(err.Error(), "rate limiter")) {
 				return false, nil
 			}
 
@@ -161,7 +176,35 @@ func (t *testDriver) awaitServiceImport(c *clusterClients, name string, verify f
 	return serviceImport
 }
 
-func toMCSPorts(from []v1.ServicePort) []v1alpha1.ServicePort {
+func (t *testDriver) awaitServiceExportCondition(c *clusterClients, condType string) {
+	Eventually(func() bool {
+		se, err := c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Get(ctx, helloServiceName, metav1.GetOptions{})
+		Expect(err).ToNot(HaveOccurred())
+
+		return meta.FindStatusCondition(se.Status.Conditions, condType) != nil
+	}, 20*time.Second, 100*time.Millisecond).Should(BeTrue(),
+		reportNonConformant(fmt.Sprintf("The %s condition was not set", condType)))
+}
+
+func (t *testDriver) startRequestPod(ctx context.Context, client clusterClients) {
+	_, err := client.k8s.CoreV1().Pods(t.namespace).Create(ctx, t.requestPod, metav1.CreateOptions{})
+	Expect(err).ToNot(HaveOccurred())
+
+	Eventually(func() error {
+		pod, err := client.k8s.CoreV1().Pods(t.namespace).Get(ctx, t.requestPod.Name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if pod.Status.Phase != corev1.PodRunning {
+			return fmt.Errorf("pod is not running yet, current status %v", pod.Status.Phase)
+		}
+
+		return nil
+	}, 20, 1).Should(Succeed())
+}
+
+func toMCSPorts(from []corev1.ServicePort) []v1alpha1.ServicePort {
 	var mcsPorts []v1alpha1.ServicePort
 
 	for _, port := range from {
@@ -182,4 +225,10 @@ func sortMCSPorts(p []v1alpha1.ServicePort) []v1alpha1.ServicePort {
 	})
 
 	return p
+}
+
+func requireTwoClusters() {
+	if len(clients) < 2 {
+		Skip("This test requires at least 2 clusters - skipping")
+	}
 }
