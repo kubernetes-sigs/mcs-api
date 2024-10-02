@@ -37,6 +37,7 @@ const (
 	RequiredLabel            = "Required"
 	DNSLabel                 = "DNS"
 	ClusterIPLabel           = "ClusterIP"
+	EndpointSliceLabel       = "EndpointSlice"
 	SpecRefReportEntry       = "spec-ref"
 	NonConformantReportEntry = "non-conformant"
 )
