@@ -146,6 +146,11 @@ func (t *testDriver) createServiceExport(c *clusterClients) {
 	Expect(err).ToNot(HaveOccurred())
 }
 
+func (t *testDriver) deleteServiceExport(c *clusterClients) {
+	Expect(c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Delete(ctx, helloServiceName,
+		metav1.DeleteOptions{})).ToNot(HaveOccurred())
+}
+
 func (t *testDriver) deployHelloService(c *clusterClients, service *corev1.Service) {
 	_, err := c.k8s.AppsV1().Deployments(t.namespace).Create(ctx, newHelloDeployment(), metav1.CreateOptions{})
 	Expect(err).ToNot(HaveOccurred())
