@@ -40,10 +40,11 @@ var _ = Describe("", func() {
 
 			for i := range clients {
 				serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, nil)
-				Expect(serviceImport).NotTo(BeNil(), reportNonConformant(fmt.Sprintf("ServiceImport was not found on cluster %d", i+1)))
+				Expect(serviceImport).NotTo(BeNil(), reportNonConformant(fmt.Sprintf("ServiceImport was not found on cluster %q",
+					clients[i].name)))
 
 				Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.ClusterSetIP), reportNonConformant(
-					fmt.Sprintf("ServiceImport on cluster %d has type %q", i+1, serviceImport.Spec.Type)))
+					fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
 			}
 		})
 
