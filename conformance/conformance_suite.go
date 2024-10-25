@@ -43,6 +43,7 @@ import (
 )
 
 type clusterClients struct {
+	name string
 	k8s  kubernetes.Interface
 	mcs  mcsclient.Interface
 	rest *rest.Config
@@ -75,21 +76,40 @@ func setupClients() error {
 	for i, context := range splitContexts {
 		overrides := clientcmd.ConfigOverrides{ClusterDefaults: clientcmd.ClusterDefaults}
 		overrides.CurrentContext = context
-		clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-			loadingRules, &overrides)
+
+		clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &overrides)
+
+		rawConfig, err := clientConfig.RawConfig()
+		if err != nil {
+			return err
+		}
+
+		name := context
+		if name == "" {
+			name = rawConfig.CurrentContext
+		}
+
+		configContext, ok := rawConfig.Contexts[name]
+		if ok {
+			name = configContext.Cluster
+		}
+
 		restConfig, err := clientConfig.ClientConfig()
 		if err != nil {
 			return err
 		}
+
 		k8sClient, err := kubernetes.NewForConfig(restConfig)
 		if err != nil {
 			return err
 		}
+
 		mcsClient, err := mcsclient.NewForConfig(restConfig)
 		if err != nil {
 			return err
 		}
-		clients[i] = clusterClients{k8s: k8sClient, mcs: mcsClient, rest: restConfig}
+
+		clients[i] = clusterClients{name: name, k8s: k8sClient, mcs: mcsClient, rest: restConfig}
 	}
 	return nil
 }
