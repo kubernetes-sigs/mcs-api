@@ -31,6 +31,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,10 +50,13 @@ type clusterClients struct {
 	rest *rest.Config
 }
 
-var contexts string
-var clients []clusterClients
-var loadingRules *clientcmd.ClientConfigLoadingRules
-var ctx = context.TODO()
+var (
+	contexts                         string
+	clients                          []clusterClients
+	loadingRules                     *clientcmd.ClientConfigLoadingRules
+	skipVerifyEndpointSliceManagedBy bool
+	ctx                              = context.TODO()
+)
 
 func TestConformance(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -64,6 +68,12 @@ func init() {
 	loadingRules.DefaultClientConfig = &clientcmd.DefaultClientConfig
 	flag.StringVar(&loadingRules.ExplicitPath, "kubeconfig", "", "absolute path(s) to the kubeconfig file(s)")
 	flag.StringVar(&contexts, "contexts", "", "comma-separated list of contexts to use")
+	flag.BoolVar(&skipVerifyEndpointSliceManagedBy, "skip-verify-eps-managed-by", false,
+		fmt.Sprintf("The MSC spec states that any EndpointSlice created by an mcs-controller must be marked as managed by "+
+			"the mcs-controller. By default, the conformance test verifies that the %q label on MCS EndpointSlices is not equal to %q. "+
+			"However with some implementations, MCS EndpointSlices may be created and managed by K8s. If this flag is set to true, "+
+			"the test only verifies the presence of the label.",
+			discoveryv1.LabelManagedBy, K8sEndpointSliceManagedByName))
 }
 
 var _ = BeforeSuite(func() {
@@ -164,6 +174,11 @@ func (t *testDriver) createServiceExport(c *clusterClients) {
 	_, err := c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Create(ctx,
 		&v1alpha1.ServiceExport{ObjectMeta: metav1.ObjectMeta{Name: helloServiceName}}, metav1.CreateOptions{})
 	Expect(err).ToNot(HaveOccurred())
+}
+
+func (t *testDriver) deleteServiceExport(c *clusterClients) {
+	Expect(c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Delete(ctx, helloServiceName,
+		metav1.DeleteOptions{})).ToNot(HaveOccurred())
 }
 
 func (t *testDriver) deployHelloService(c *clusterClients, service *corev1.Service) {
