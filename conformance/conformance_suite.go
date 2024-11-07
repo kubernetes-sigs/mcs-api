@@ -211,6 +211,26 @@ func (t *testDriver) awaitServiceImport(c *clusterClients, name string, verify f
 	return serviceImport
 }
 
+func (t *testDriver) awaitNoServiceImport(c *clusterClients, name, nonConformanceMsg string) {
+	Eventually(func() bool {
+		_, err := c.mcs.MulticlusterV1alpha1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			return true
+		}
+
+		Expect(err).ToNot(HaveOccurred())
+
+		return false
+	}, 20*time.Second, 100*time.Millisecond).Should(BeTrue(), reportNonConformant(nonConformanceMsg))
+}
+
+func (t *testDriver) ensureServiceImport(c *clusterClients, name, nonConformanceMsg string) {
+	Consistently(func() error {
+		_, err := c.mcs.MulticlusterV1alpha1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
+		return err
+	}, 5*time.Second, 100*time.Millisecond).ShouldNot(HaveOccurred(), reportNonConformant(nonConformanceMsg))
+}
+
 func (t *testDriver) awaitServiceExportCondition(c *clusterClients, condType string) {
 	Eventually(func() bool {
 		se, err := c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Get(ctx, helloServiceName, metav1.GetOptions{})
