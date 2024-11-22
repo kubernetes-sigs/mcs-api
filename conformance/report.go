@@ -36,6 +36,7 @@ const (
 	OptionalLabel            = "Optional"
 	RequiredLabel            = "Required"
 	DNSLabel                 = "DNS"
+	ConnectivityLabel        = "Connectivity"
 	ClusterIPLabel           = "ClusterIP"
 	EndpointSliceLabel       = "EndpointSlice"
 	SpecRefReportEntry       = "spec-ref"
