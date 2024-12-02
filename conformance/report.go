@@ -39,6 +39,7 @@ const (
 	ConnectivityLabel        = "Connectivity"
 	ClusterIPLabel           = "ClusterIP"
 	EndpointSliceLabel       = "EndpointSlice"
+	ExportedLabelsLabel      = "ExportedLabels"
 	SpecRefReportEntry       = "spec-ref"
 	NonConformantReportEntry = "non-conformant"
 )

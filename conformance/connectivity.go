@@ -54,7 +54,7 @@ var _ = Describe("", func() {
 			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#dns")
 			By("Exporting the service", func() {
 				// On the "remote" cluster
-				t.createServiceExport(&clients[0])
+				t.createServiceExport(&clients[0], newHelloServiceExport())
 			})
 			By("Issuing a request from all clusters", func() {
 				// Run on all clusters
@@ -84,7 +84,7 @@ var _ = Describe("", func() {
 
 			By(fmt.Sprintf("Exporting the service on cluster %q", clients[0].name))
 
-			t.createServiceExport(&clients[0])
+			t.createServiceExport(&clients[0], newHelloServiceExport())
 
 			By(fmt.Sprintf("Awaiting service deployment pod IP on cluster %q", clients[0].name))
 
