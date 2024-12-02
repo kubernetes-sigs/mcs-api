@@ -51,7 +51,7 @@ var _ = Describe("Connectivity to remote services", func() {
 			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#dns")
 			By("exporting the service", func() {
 				// On the "remote" cluster
-				t.createServiceExport(&clients[0])
+				t.createServiceExport(&clients[0], newHelloServiceExport())
 			})
 			By("issuing a request from all clusters", func() {
 				// Run on all clusters
