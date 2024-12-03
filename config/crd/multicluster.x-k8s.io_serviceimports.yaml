@@ -11,6 +11,9 @@ spec:
     kind: ServiceImport
     listKind: ServiceImportList
     plural: serviceimports
+    shortNames:
+    - svcimport
+    - svcim
     singular: serviceimport
   scope: Namespaced
   versions:

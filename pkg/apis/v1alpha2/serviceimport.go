@@ -23,6 +23,7 @@ import (
 
 // +genclient
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:shortName={svcimport,svcim}
 
 // ServiceImport describes a service imported from clusters in a ClusterSet and
 // the information necessary to consume it. ServiceImport is managed by an MCS
