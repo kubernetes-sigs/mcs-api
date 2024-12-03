@@ -64,7 +64,7 @@ generate:
 # Generate manifests e.g. CRD, RBAC etc.
 .PHONY: manifests
 manifests:
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=mcs-derived-service-manager output:rbac:dir="$(ROOT)/config/rbac" webhook schemapatch:manifests="$(ROOT)/config/crd-base" paths="$(ROOT)/..." output:crd:none output:schemapatch:dir="$(ROOT)/config/crd"
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=mcs-derived-service-manager output:rbac:dir="$(ROOT)/config/rbac" webhook schemapatch:manifests="$(ROOT)/config/crd-base" paths="$(ROOT)/..." output:crd:dir="$(ROOT)/config/crd" output:schemapatch:dir="$(ROOT)/config/crd-base"
 
 # Run tests
 .PHONY: test
