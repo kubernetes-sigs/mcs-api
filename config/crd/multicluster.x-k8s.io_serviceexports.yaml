@@ -11,6 +11,8 @@ spec:
     kind: ServiceExport
     listKind: ServiceExportList
     plural: serviceexports
+    shortNames:
+    - svcexport
     singular: serviceexport
   scope: Namespaced
   versions:
