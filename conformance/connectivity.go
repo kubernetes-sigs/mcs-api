@@ -47,7 +47,7 @@ var _ = Describe("Connectivity to remote services", func() {
 	})
 
 	Context("with an exported ClusterIP service", func() {
-		It("should be accessible through DNS (after a potential delay)", Label(OptionalLabel, DNSLabel, ClusterIPLabel), func() {
+		It("should be accessible through DNS (after a potential delay)", Label(OptionalLabel, ConnectivityLabel, ClusterIPLabel), func() {
 			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#dns")
 			By("exporting the service", func() {
 				// On the "remote" cluster
