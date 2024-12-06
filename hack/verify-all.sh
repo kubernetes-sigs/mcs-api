@@ -54,7 +54,7 @@ fi
 EXCLUDE="verify-all.sh"
 
 ret=0
-for t in `ls $SCRIPT_ROOT/hack/verify-*.sh`
+for t in "$SCRIPT_ROOT"/hack/verify-*.sh
 do
   if is-excluded $t ; then
     echo "Skipping $t"
