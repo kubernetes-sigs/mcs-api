@@ -83,45 +83,62 @@ var _ = BeforeSuite(func() {
 func setupClients() error {
 	splitContexts := strings.Split(contexts, ",")
 	clients = make([]clusterClients, len(splitContexts))
-	for i, context := range splitContexts {
-		overrides := clientcmd.ConfigOverrides{ClusterDefaults: clientcmd.ClusterDefaults}
-		overrides.CurrentContext = context
+	accumulatedErrors := []error{}
 
-		clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &overrides)
+	for i, kubeContext := range splitContexts {
+		err := func() error {
+			overrides := clientcmd.ConfigOverrides{ClusterDefaults: clientcmd.ClusterDefaults}
+			overrides.CurrentContext = kubeContext
 
-		rawConfig, err := clientConfig.RawConfig()
-		if err != nil {
-			return err
-		}
+			clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &overrides)
 
-		name := context
-		if name == "" {
-			name = rawConfig.CurrentContext
-		}
+			rawConfig, err := clientConfig.RawConfig()
+			if err != nil {
+				return fmt.Errorf("error setting up a Kubernetes API client on context %s: %w", kubeContext, err)
+			}
 
-		configContext, ok := rawConfig.Contexts[name]
-		if ok {
-			name = configContext.Cluster
-		}
+			name := kubeContext
+			if name == "" {
+				name = rawConfig.CurrentContext
+			}
 
-		restConfig, err := clientConfig.ClientConfig()
-		if err != nil {
-			return err
-		}
+			configContext, ok := rawConfig.Contexts[name]
+			if ok {
+				name = configContext.Cluster
+			}
 
-		k8sClient, err := kubernetes.NewForConfig(restConfig)
-		if err != nil {
-			return err
-		}
+			restConfig, err := clientConfig.ClientConfig()
+			if err != nil {
+				return fmt.Errorf("error setting up a Kubernetes API client on context %s: %w", name, err)
+			}
 
-		mcsClient, err := mcsclient.NewForConfig(restConfig)
-		if err != nil {
-			return err
-		}
+			k8sClient, err := kubernetes.NewForConfig(restConfig)
+			if err != nil {
+				return fmt.Errorf("error setting up a Kubernetes API client on context %s: %w", name, err)
+			}
 
-		clients[i] = clusterClients{name: name, k8s: k8sClient, mcs: mcsClient, rest: restConfig}
+			mcsClient, err := mcsclient.NewForConfig(restConfig)
+			if err != nil {
+				return fmt.Errorf("error setting up an MCS API client on context %s: %w", name, err)
+			}
+
+			if _, err := mcsClient.MulticlusterV1alpha1().ServiceExports("").List(context.TODO(), metav1.ListOptions{}); err != nil {
+				return fmt.Errorf("error listing ServiceExports on context %s, is the MCS API installed? %w", name, err)
+			}
+
+			if _, err := mcsClient.MulticlusterV1alpha1().ServiceImports("").List(context.TODO(), metav1.ListOptions{}); err != nil {
+				return fmt.Errorf("error listing ServiceImports on context %s, is the MCS API installed? %w", name, err)
+			}
+
+			clients[i] = clusterClients{name: name, k8s: k8sClient, mcs: mcsClient, rest: restConfig}
+
+			return nil
+		}()
+
+		accumulatedErrors = append(accumulatedErrors, err)
 	}
-	return nil
+
+	return errors.Join(accumulatedErrors...)
 }
 
 type testDriver struct {
