@@ -15,6 +15,10 @@
 <body>
 <h2>MCS Conformance Report</h2>
 
+{{if .SuiteFailure }}
+    <p style="color: red">{{.SuiteFailure}}</p>
+{{end}}
+
 {{range .Groups}}
 <h3>{{.Name}}</h3>
 <table>

@@ -88,8 +88,14 @@ func init() {
 
 var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 	testGroupMap := map[string]*testGrouping{}
+	suiteFailure := ""
 
 	for _, specReport := range report.SpecReports {
+		if specReport.LeafNodeType == types.NodeTypeBeforeSuite && specReport.State == types.SpecStateFailed {
+			suiteFailure = parseFailureMessage(specReport.FailureMessage())
+			continue
+		}
+
 		if specReport.LeafNodeType != types.NodeTypeIt || specReport.State == types.SpecStatePending ||
 			specReport.State == types.SpecStateSkipped {
 			continue
@@ -144,9 +150,11 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 	}
 
 	data := struct {
-		Groups []testGrouping
+		Groups       []testGrouping
+		SuiteFailure string
 	}{
-		testGroups,
+		Groups:       testGroups,
+		SuiteFailure: suiteFailure,
 	}
 
 	out, err := os.Create("report.html")
