@@ -34,20 +34,22 @@ import (
 )
 
 type (
-	DoOperationFunc func() (interface{}, error)
-	CheckResultFunc func(result interface{}) (bool, string, error)
+	doOperationFunc func() (interface{}, error)
+	checkResultFunc func(result interface{}) (bool, string, error)
 )
 
-// AwaitUntil periodically performs the given operation until the given CheckResultFunc returns true, an error, or a
-// timeout is reached.
-func AwaitUntil(opMsg string, doOperation DoOperationFunc, checkResult CheckResultFunc) interface{} {
+// AwaitUntil repeats the given operation until the given checkResultFunc returns true, an error, or a
+// timeout is reached; it then verifies that no error occurred.
+func AwaitUntil(opMsg string, doOperation doOperationFunc, checkResult checkResultFunc) interface{} {
 	result, errMsg, err := AwaitResultOrError(opMsg, doOperation, checkResult)
 	Expect(err).NotTo(HaveOccurred(), errMsg)
 
 	return result
 }
 
-func AwaitResultOrError(opMsg string, doOperation DoOperationFunc, checkResult CheckResultFunc) (interface{}, string, error) {
+// AwaitResultOrError repeats the given operation until the given checkResultFunc returns true, an error, or a
+// timeout is reached. Transient errors returned by the operation itself are ignored.
+func AwaitResultOrError(opMsg string, doOperation doOperationFunc, checkResult checkResultFunc) (interface{}, string, error) {
 	var finalResult interface{}
 	var lastMsg string
 
@@ -55,7 +57,7 @@ func AwaitResultOrError(opMsg string, doOperation DoOperationFunc, checkResult C
 		10*time.Second, true, func(_ context.Context) (bool, error) {
 			result, err := doOperation()
 			if err != nil {
-				if IsTransientError(err, opMsg) {
+				if isTransientError(err, opMsg) {
 					return false, nil
 				}
 				return false, err
@@ -86,9 +88,9 @@ func AwaitResultOrError(opMsg string, doOperation DoOperationFunc, checkResult C
 	return finalResult, errMsg, err
 }
 
-// identify API errors which could be considered transient/recoverable
+// isTransientError identifies API errors which could be considered transient/recoverable
 // due to server state.
-func IsTransientError(err error, opMsg string) bool {
+func isTransientError(err error, opMsg string) bool {
 	if errors.IsInternalError(err) ||
 		errors.IsServerTimeout(err) ||
 		errors.IsTimeout(err) ||
