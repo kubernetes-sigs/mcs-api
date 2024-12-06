@@ -28,10 +28,14 @@ import (
 )
 
 var _ = Describe("", func() {
+	var helloServiceExport *v1alpha1.ServiceExport
 	t := newTestDriver()
 
+	BeforeEach(func() {
+		helloServiceExport = newHelloServiceExport()
+	})
 	JustBeforeEach(func() {
-		t.createServiceExport(&clients[0])
+		t.createServiceExport(&clients[0], helloServiceExport)
 	})
 
 	Specify("Exporting a ClusterIP service should create a ServiceImport of type ClusterSetIP in the service's namespace in each cluster. "+
@@ -75,7 +79,7 @@ var _ = Describe("", func() {
 			By(fmt.Sprintf("Exporting the service on the second cluster %q", clients[1].name))
 
 			t.deployHelloService(&clients[1], newHelloService())
-			t.createServiceExport(&clients[1])
+			t.createServiceExport(&clients[1], newHelloServiceExport())
 
 			// Sanity check and to also wait a bit for the second cluster to export. There's no deterministic way to tell if/when
 			// the second cluster has finished exporting other than utilizing different service ports in each cluster but service
@@ -141,11 +145,13 @@ var _ = Describe("", func() {
 
 	Context("A service exported on two clusters", func() {
 		var helloService2 *corev1.Service
+		var helloServiceExport2 *v1alpha1.ServiceExport
 
 		BeforeEach(func() {
 			requireTwoClusters()
 
 			helloService2 = newHelloService()
+			helloServiceExport2 = newHelloServiceExport()
 		})
 
 		JustBeforeEach(func() {
@@ -154,7 +160,7 @@ var _ = Describe("", func() {
 			time.Sleep(100 * time.Millisecond)
 
 			t.deployHelloService(&clients[1], helloService2)
-			t.createServiceExport(&clients[1])
+			t.createServiceExport(&clients[1], helloServiceExport2)
 		})
 
 		Context("", func() {
@@ -204,5 +210,50 @@ var _ = Describe("", func() {
 						reportNonConformant("The service ports were not resolved correctly"))
 				})
 		})
+		Context("with conflicting annotations and labels", func() {
+			BeforeEach(func() {
+				helloServiceExport.Spec.ExportedAnnotations = map[string]string{"dummy-annotation": "true"}
+				helloServiceExport.Spec.ExportedLabels = map[string]string{"dummy-label": "true"}
+
+				helloServiceExport2.Spec.ExportedAnnotations = map[string]string{"dummy-annotation2": "true"}
+				helloServiceExport2.Spec.ExportedLabels = map[string]string{"dummy-label2": "true"}
+			})
+
+			Specify("should apply the conflict resolution policy and report a Conflict condition on each ServiceExport",
+				Label(OptionalLabel), Label(ExportedLabelsLabel), func() {
+					AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#labels-and-annotations")
+
+					t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConflict)
+					t.awaitServiceExportCondition(&clients[1], v1alpha1.ServiceExportConflict)
+
+					serviceImport := t.awaitServiceImport(&clients[0], t.helloService.Name, func(serviceImport *v1alpha1.ServiceImport) bool {
+						return len(serviceImport.Labels) > 0
+					})
+					Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
+
+					Expect(serviceImport.Annotations).To(Equal(helloServiceExport.Spec.ExportedAnnotations), reportNonConformant(""))
+					Expect(serviceImport.Labels).To(Equal(helloServiceExport.Spec.ExportedLabels), reportNonConformant(""))
+				})
+		})
+	})
+
+	Context("", func() {
+		BeforeEach(func() {
+			helloServiceExport.Spec.ExportedAnnotations = map[string]string{"dummy-annotation": "true"}
+			helloServiceExport.Spec.ExportedLabels = map[string]string{"dummy-label": "true"}
+		})
+
+		Specify("Only labels and annotations specified as exported in the ServiceExport should be propagated to the ServiceImport",
+			Label(OptionalLabel), Label(ExportedLabelsLabel), func() {
+				AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#labels-and-annotations")
+
+				serviceImport := t.awaitServiceImport(&clients[0], helloServiceName, func(serviceImport *v1alpha1.ServiceImport) bool {
+					return len(serviceImport.Labels) > 0
+				})
+				Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
+
+				Expect(serviceImport.Annotations).To(Equal(helloServiceExport.Spec.ExportedAnnotations), reportNonConformant(""))
+				Expect(serviceImport.Labels).To(Equal(helloServiceExport.Spec.ExportedLabels), reportNonConformant(""))
+			})
 	})
 })
