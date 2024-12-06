@@ -17,7 +17,7 @@ limitations under the License.
 package conformance
 
 import (
-	_ "embed"
+	_ "embed" // Needed for go:embed
 	"errors"
 	"fmt"
 	"html/template"

@@ -58,6 +58,7 @@ var (
 	ctx                              = context.TODO()
 )
 
+// TestConformance runs the conformance test.
 func TestConformance(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Conformance Suite")
