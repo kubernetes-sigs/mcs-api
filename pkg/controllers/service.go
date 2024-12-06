@@ -68,7 +68,7 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, nil
 	}
 
-	svcImport.Spec.IPs = []string{service.Spec.ClusterIP}
+	svcImport.Spec.IPs = service.Spec.ClusterIPs
 	if err := r.Client.Update(ctx, &svcImport); err != nil {
 		return ctrl.Result{}, err
 	}
