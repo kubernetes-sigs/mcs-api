@@ -58,10 +58,7 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, ClusterIPLabel), func() {
 		for _, client := range clients {
 			By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), client.name))
 
-			Eventually(func() string {
-				stdout, _, _ := execCmd(client.k8s, client.rest, t.requestPod.Name, t.namespace, command)
-				return string(stdout)
-			}, 20, 1).Should(ContainSubstring(clusterSetIP), reportNonConformant(""))
+			t.awaitCmdOutputContains(&client, command, clusterSetIP, 1, reportNonConformant(""))
 		}
 	})
 
@@ -107,10 +104,7 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, ClusterIPLabel), func() {
 
 		By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), clients[0].name))
 
-		Eventually(func() string {
-			stdout, _, _ := execCmd(clients[0].k8s, clients[0].rest, t.requestPod.Name, t.namespace, command)
-			return string(stdout)
-		}, 20, 1).Should(ContainSubstring(resolvedIP), reportNonConformant(""))
+		t.awaitCmdOutputContains(&clients[0], command, resolvedIP, 1, reportNonConformant(""))
 	})
 })
 
@@ -122,9 +116,7 @@ func (t *testDriver) expectSRVRecords(c *clusterClients, domainName string) []SR
 	var srvRecs []SRVRecord
 
 	Eventually(func() []SRVRecord {
-		stdout, _, _ := execCmd(c.k8s, c.rest, t.requestPod.Name, t.namespace, command)
-		srvRecs = parseSRVRecords(string(stdout))
-
+		srvRecs = parseSRVRecords(t.execCmdOnRequestPod(c, command))
 		return srvRecs
 	}, 20, 1).ShouldNot(BeEmpty(), reportNonConformant(""))
 

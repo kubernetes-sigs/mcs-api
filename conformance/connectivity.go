@@ -17,28 +17,31 @@ limitations under the License.
 package conformance
 
 import (
+	"context"
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("Connectivity to remote services", func() {
+var _ = Describe("", func() {
 	t := newTestDriver()
 
-	Context("with no exported service", func() {
+	Context("Connectivity to a service that is not exported", func() {
 		It("should be inaccessible", Label(RequiredLabel), func() {
 			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#exporting-services")
 			By("attempting to access the remote service", func() {
 				By("issuing a request from all clusters", func() {
+					command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42",
+						t.helloService.Name, t.namespace)}
+
 					// Run on all clusters
 					for _, client := range clients {
 						// Repeat multiple times
 						for i := 0; i < 20; i++ {
-							command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42",
-								t.helloService.Name, t.namespace)}
-							stdout, _, _ := execCmd(client.k8s, client.rest, t.requestPod.Name, t.namespace, command)
-							Expect(string(stdout)).NotTo(ContainSubstring("pod ip"), reportNonConformant(""))
+							Expect(t.execCmdOnRequestPod(&client, command)).NotTo(ContainSubstring("pod ip"), reportNonConformant(""))
 						}
 					}
 				})
@@ -46,24 +49,70 @@ var _ = Describe("Connectivity to remote services", func() {
 		})
 	})
 
-	Context("with an exported ClusterIP service", func() {
-		It("should be accessible through DNS (after a potential delay)", Label(OptionalLabel, ConnectivityLabel, ClusterIPLabel), func() {
+	Context("Connectivity to an exported ClusterIP service", func() {
+		It("should be accessible through DNS", Label(OptionalLabel, ConnectivityLabel, ClusterIPLabel), func() {
 			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#dns")
-			By("exporting the service", func() {
+			By("Exporting the service", func() {
 				// On the "remote" cluster
 				t.createServiceExport(&clients[0])
 			})
-			By("issuing a request from all clusters", func() {
+			By("Issuing a request from all clusters", func() {
 				// Run on all clusters
+				command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42",
+					t.helloService.Name, t.namespace)}
+
 				for _, client := range clients {
-					command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42",
-						t.helloService.Name, t.namespace)}
-					Eventually(func() string {
-						stdout, _, _ := execCmd(client.k8s, client.rest, t.requestPod.Name, t.namespace, command)
-						return string(stdout)
-					}, 20, 1).Should(ContainSubstring("pod ip"), reportNonConformant(""))
+					By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), client.name))
+
+					t.awaitCmdOutputContains(&client, command, "pod ip", 1, reportNonConformant(""))
 				}
 			})
+		})
+	})
+
+	Context("Connectivity to a ClusterIP service existing in two clusters but exported from one", func() {
+		BeforeEach(func() {
+			requireTwoClusters()
+		})
+
+		JustBeforeEach(func() {
+			t.deployHelloService(&clients[1], newHelloService())
+		})
+
+		It("should only access the exporting cluster", Label(OptionalLabel, ConnectivityLabel, ClusterIPLabel), func() {
+			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/blob/master/keps/sig-multicluster/1645-multi-cluster-services-api/README.md#exporting-services")
+
+			By(fmt.Sprintf("Exporting the service on cluster %q", clients[0].name))
+
+			t.createServiceExport(&clients[0])
+
+			By(fmt.Sprintf("Awaiting service deployment pod IP on cluster %q", clients[0].name))
+
+			servicePodIP := ""
+
+			Eventually(func() string {
+				pods, err := clients[0].k8s.CoreV1().Pods(t.namespace).List(context.TODO(), metav1.ListOptions{
+					LabelSelector: metav1.FormatLabelSelector(newHelloDeployment().Spec.Selector),
+				})
+				Expect(err).ToNot(HaveOccurred())
+
+				if len(pods.Items) > 0 {
+					servicePodIP = pods.Items[0].Status.PodIP
+				}
+
+				return servicePodIP
+			}, 20, 1).ShouldNot(BeEmpty(), "Service deployment pod was not allocated an IP")
+
+			By(fmt.Sprintf("Retrieved service deployment pod IP %q", servicePodIP))
+
+			command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42",
+				t.helloService.Name, t.namespace)}
+
+			for _, client := range clients {
+				By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), client.name))
+
+				t.awaitCmdOutputContains(&client, command, servicePodIP, 10, reportNonConformant(""))
+			}
 		})
 	})
 })
