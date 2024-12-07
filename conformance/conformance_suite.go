@@ -276,6 +276,18 @@ func (t *testDriver) startRequestPod(ctx context.Context, client clusterClients)
 	}, 20, 1).Should(Succeed())
 }
 
+func (t *testDriver) execCmdOnRequestPod(c *clusterClients, command []string) string {
+	stdout, _, _ := execCmd(c.k8s, c.rest, t.requestPod.Name, t.namespace, command)
+	return string(stdout)
+}
+
+func (t *testDriver) awaitCmdOutputContains(c *clusterClients, command []string, expectedString string, nIter int, msg func() string) {
+	Eventually(func(g Gomega) {
+		output := t.execCmdOnRequestPod(c, command)
+		g.Expect(output).To(ContainSubstring(expectedString), "Command output")
+	}).Within(time.Duration(20*int64(nIter))*time.Second).ProbeEvery(time.Second).MustPassRepeatedly(nIter).Should(Succeed(), msg)
+}
+
 func toMCSPorts(from []corev1.ServicePort) []v1alpha1.ServicePort {
 	var mcsPorts []v1alpha1.ServicePort
 

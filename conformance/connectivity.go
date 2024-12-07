@@ -18,6 +18,7 @@ package conformance
 
 import (
 	"fmt"
+	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -31,14 +32,14 @@ var _ = Describe("Connectivity to remote services", func() {
 			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#exporting-services")
 			By("attempting to access the remote service", func() {
 				By("issuing a request from all clusters", func() {
+					command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42",
+						t.helloService.Name, t.namespace)}
+
 					// Run on all clusters
 					for _, client := range clients {
 						// Repeat multiple times
 						for i := 0; i < 20; i++ {
-							command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42",
-								t.helloService.Name, t.namespace)}
-							stdout, _, _ := execCmd(client.k8s, client.rest, t.requestPod.Name, t.namespace, command)
-							Expect(string(stdout)).NotTo(ContainSubstring("pod ip"), reportNonConformant(""))
+							Expect(t.execCmdOnRequestPod(&client, command)).NotTo(ContainSubstring("pod ip"), reportNonConformant(""))
 						}
 					}
 				})
@@ -55,13 +56,14 @@ var _ = Describe("Connectivity to remote services", func() {
 			})
 			By("issuing a request from all clusters", func() {
 				// Run on all clusters
+				command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42",
+					t.helloService.Name, t.namespace)}
+
+				// Run on all clusters
 				for _, client := range clients {
-					command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42",
-						t.helloService.Name, t.namespace)}
-					Eventually(func() string {
-						stdout, _, _ := execCmd(client.k8s, client.rest, t.requestPod.Name, t.namespace, command)
-						return string(stdout)
-					}, 20, 1).Should(ContainSubstring("pod ip"), reportNonConformant(""))
+					By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), client.name))
+
+					t.awaitCmdOutputContains(&client, command, "pod ip", 1, reportNonConformant(""))
 				}
 			})
 		})
