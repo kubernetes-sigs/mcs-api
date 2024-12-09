@@ -22,17 +22,20 @@ KUBE_ROOT=$(dirname "${BASH_SOURCE}")/..
 
 cd "${KUBE_ROOT}"
 
-PACKAGES=($(go list ./... | grep -v /vendor/))
+PACKAGES=($(go list ./... | sed sXsigs.k8s.io/mcs-apiX..X))
 bad_files=()
 for package in "${PACKAGES[@]}"; do
-  out=$(go -C tools run golang.org/x/lint/golint -min_confidence=0.9 "${package}" | grep -v -E '(should not use dot imports)' || :)
+  out=$(go -C tools run golang.org/x/lint/golint -min_confidence=0.9 "${package}" 2>&1 |
+        sed 'sX^../XX;/should not use dot imports/d;/exported const OptionalLabel/d;/^go: downloading/d' ||:)
   if [[ -n "${out}" ]]; then
     bad_files+=("${out}")
   fi
 done
 if [[ "${#bad_files[@]}" -ne 0 ]]; then
-  echo "!!! '$GOLINT' problems: "
-  echo "${bad_files[@]}"
+  echo "!!! golint problems: "
+  for err in "${bad_files[@]}"; do
+    echo "$err"
+  done
   exit 1
 fi
 

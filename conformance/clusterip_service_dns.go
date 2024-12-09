@@ -71,7 +71,7 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, ClusterIPLabel), func() {
 		for _, client := range clients {
 			srvRecs := t.expectSRVRecords(&client, domainName)
 
-			expSRVRecs := []SRVRecord{{
+			expSRVRecs := []srvRecord{{
 				port:       t.helloService.Spec.Ports[0].Port,
 				domainName: domainName,
 			}}
@@ -108,14 +108,14 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, ClusterIPLabel), func() {
 	})
 })
 
-func (t *testDriver) expectSRVRecords(c *clusterClients, domainName string) []SRVRecord {
+func (t *testDriver) expectSRVRecords(c *clusterClients, domainName string) []srvRecord {
 	command := []string{"sh", "-c", "nslookup -type=SRV " + domainName}
 
 	By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), c.name))
 
-	var srvRecs []SRVRecord
+	var srvRecs []srvRecord
 
-	Eventually(func() []SRVRecord {
+	Eventually(func() []srvRecord {
 		srvRecs = parseSRVRecords(t.execCmdOnRequestPod(c, command))
 		return srvRecs
 	}, 20, 1).ShouldNot(BeEmpty(), reportNonConformant(""))
@@ -130,19 +130,19 @@ func (t *testDriver) expectSRVRecords(c *clusterClients, domainName string) []SR
 // to extract the port and target domain name (the last two tokens)
 var srvRecordRegEx = regexp.MustCompile(`.*=\s*\d*\s*\d*\s*(\d*)\s*([a-zA-Z0-9-.]*)`)
 
-type SRVRecord struct {
+type srvRecord struct {
 	port       int32
 	domainName string
 }
 
-func parseSRVRecords(str string) []SRVRecord {
-	var recs []SRVRecord
+func parseSRVRecords(str string) []srvRecord {
+	var recs []srvRecord
 
 	matches := srvRecordRegEx.FindAllStringSubmatch(str, -1)
 	for i := range matches {
 		// First match at index 0 is the full text that was matched; index 1 is the port and index 2 is the domain name.
 		port, _ := strconv.ParseInt(matches[i][1], 10, 32)
-		recs = append(recs, SRVRecord{
+		recs = append(recs, srvRecord{
 			port:       int32(port),
 			domainName: matches[i][2],
 		})

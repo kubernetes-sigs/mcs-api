@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
 
+// K8sEndpointSliceManagedByName is the name used for endpoint slices managed by the Kubernetes controller
 const K8sEndpointSliceManagedByName = "endpointslice-controller.k8s.io"
 
 var _ = Describe("", Label(OptionalLabel, EndpointSliceLabel), func() {
