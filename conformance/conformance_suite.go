@@ -77,7 +77,7 @@ func init() {
 }
 
 var _ = BeforeSuite(func() {
-	Expect(setupClients()).To(Succeed())
+	Expect(setupClients()).To(Succeed(), "Test suite set up failed")
 })
 
 func setupClients() error {
@@ -123,11 +123,11 @@ func setupClients() error {
 			}
 
 			if _, err := mcsClient.MulticlusterV1alpha1().ServiceExports("").List(context.TODO(), metav1.ListOptions{}); err != nil {
-				return fmt.Errorf("error listing ServiceExports on context %s, is the MCS API installed? %w", name, err)
+				return fmt.Errorf("error listing ServiceExports on context %s: %w. Is the MCS API installed?", name, err)
 			}
 
 			if _, err := mcsClient.MulticlusterV1alpha1().ServiceImports("").List(context.TODO(), metav1.ListOptions{}); err != nil {
-				return fmt.Errorf("error listing ServiceImports on context %s, is the MCS API installed? %w", name, err)
+				return fmt.Errorf("error listing ServiceImports on context %s: %w. Is the MCS API installed?", name, err)
 			}
 
 			clients[i] = clusterClients{name: name, k8s: k8sClient, mcs: mcsClient, rest: restConfig}
