@@ -19,8 +19,7 @@ TOP := $(dir $(firstword $(MAKEFILE_LIST)))
 ROOT := $(abspath $(TOP))
 # Image URL to use all building/pushing image targets
 IMG ?= mcs-api-controller:latest
-# Need v1 to support defaults in CRDs, unfortunately limiting us to k8s 1.16+
-CRD_OPTIONS ?= "crd:crdVersions=v1"
+CRD_OPTIONS ?= "crd"
 
 CONTROLLER_GEN=go -C tools run sigs.k8s.io/controller-tools/cmd/controller-gen
 # enable Go modules
@@ -65,7 +64,7 @@ generate:
 # Generate manifests e.g. CRD, RBAC etc.
 .PHONY: manifests
 manifests:
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=mcs-derived-service-manager output:rbac:dir="$(ROOT)/config/rbac" webhook schemapatch:manifests="$(ROOT)/config/crd-base" paths="$(ROOT)/..." output:crd:none output:schemapatch:dir="$(ROOT)/config/crd"
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=mcs-derived-service-manager output:rbac:dir="$(ROOT)/config/rbac" webhook schemapatch:manifests="$(ROOT)/config/crd-base" paths="$(ROOT)/..." output:crd:dir="$(ROOT)/config/crd" output:schemapatch:dir="$(ROOT)/config/crd-base"
 
 # Run tests
 .PHONY: test
