@@ -188,9 +188,9 @@ func newTestDriver() *testDriver {
 	return t
 }
 
-func (t *testDriver) createServiceExport(c *clusterClients) {
-	_, err := c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Create(ctx,
-		&v1alpha1.ServiceExport{ObjectMeta: metav1.ObjectMeta{Name: helloServiceName}}, metav1.CreateOptions{})
+func (t *testDriver) createServiceExport(c *clusterClients, serviceExport *v1alpha1.ServiceExport) {
+	_, err := c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Create(
+		ctx, serviceExport, metav1.CreateOptions{})
 	Expect(err).ToNot(HaveOccurred())
 }
 
