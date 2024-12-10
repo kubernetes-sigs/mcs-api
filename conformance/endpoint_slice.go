@@ -37,7 +37,7 @@ var _ = Describe("", Label(OptionalLabel, EndpointSliceLabel), func() {
 	t := newTestDriver()
 
 	JustBeforeEach(func() {
-		t.createServiceExport(&clients[0])
+		t.createServiceExport(&clients[0], newHelloServiceExport())
 	})
 
 	Specify("Exporting a service should create an MCS EndpointSlice in the service's namespace in each cluster with the "+

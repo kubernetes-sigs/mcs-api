@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
 
 const helloServiceName = "hello"
@@ -28,7 +29,9 @@ const helloServiceName = "hello"
 func newHelloService() *corev1.Service {
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: helloServiceName,
+			Name:        helloServiceName,
+			Annotations: map[string]string{"dummy-svc": "dummy"},
+			Labels:      map[string]string{"dummy-svc": "dummy"},
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
@@ -50,6 +53,16 @@ func newHelloService() *corev1.Service {
 			SessionAffinityConfig: &corev1.SessionAffinityConfig{
 				ClientIP: &corev1.ClientIPConfig{TimeoutSeconds: ptr.To(int32(10))},
 			},
+		},
+	}
+}
+
+func newHelloServiceExport() *v1alpha1.ServiceExport {
+	return &v1alpha1.ServiceExport{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        helloServiceName,
+			Annotations: map[string]string{"dummy-svcexport": "dummy"},
+			Labels:      map[string]string{"dummy-svcexport": "dummy"},
 		},
 	}
 }
