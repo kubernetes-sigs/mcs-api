@@ -181,7 +181,9 @@ func newTestDriver() *testDriver {
 		// Clean up the shared namespace
 		for _, client := range clients {
 			err := client.k8s.CoreV1().Namespaces().Delete(ctx, t.namespace, metav1.DeleteOptions{})
-			Expect(err).ToNot(HaveOccurred())
+			if !apierrors.IsNotFound(err) {
+				Expect(err).ToNot(HaveOccurred())
+			}
 		}
 	})
 
@@ -287,6 +289,34 @@ func (t *testDriver) awaitCmdOutputContains(c *clusterClients, command []string,
 		output := t.execCmdOnRequestPod(c, command)
 		g.Expect(output).To(ContainSubstring(expectedString), "Command output")
 	}).Within(time.Duration(20*int64(nIter))*time.Second).ProbeEvery(time.Second).MustPassRepeatedly(nIter).Should(Succeed(), msg)
+}
+
+type twoClusterTestDriver struct {
+	*testDriver
+	helloService2       *corev1.Service
+	helloServiceExport2 *v1alpha1.ServiceExport
+}
+
+func newTwoClusterTestDriver(t *testDriver) *twoClusterTestDriver {
+	tt := &twoClusterTestDriver{testDriver: t}
+
+	BeforeEach(func() {
+		requireTwoClusters()
+
+		tt.helloService2 = newHelloService()
+		tt.helloServiceExport2 = newHelloServiceExport()
+	})
+
+	JustBeforeEach(func() {
+		// Sleep a little before deploying on the second cluster to ensure the first cluster's ServiceExport timestamp
+		// is older so conflict checking is deterministic.
+		time.Sleep(100 * time.Millisecond)
+
+		t.deployHelloService(&clients[1], tt.helloService2)
+		t.createServiceExport(&clients[1], tt.helloServiceExport2)
+	})
+
+	return tt
 }
 
 func toMCSPorts(from []corev1.ServicePort) []v1alpha1.ServicePort {
