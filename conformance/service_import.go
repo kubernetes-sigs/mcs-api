@@ -27,37 +27,19 @@ import (
 	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
 
-var _ = Describe("", func() {
+var (
+	_ = Describe("", testGeneralServiceImport)
+	_ = Describe("", Label(ClusterIPLabel), testClusterIPServiceImport)
+)
+
+func testGeneralServiceImport() {
 	t := newTestDriver()
 
 	JustBeforeEach(func() {
 		t.createServiceExport(&clients[0])
 	})
 
-	Specify("Exporting a ClusterIP service should create a ServiceImport of type ClusterSetIP in the service's namespace in each cluster. "+
-		"Unexporting should delete the ServiceImport", Label(RequiredLabel, ClusterIPLabel), func() {
-		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#importing-services")
-
-		for i := range clients {
-			serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, nil)
-			Expect(serviceImport).NotTo(BeNil(), reportNonConformant(fmt.Sprintf("ServiceImport was not found on cluster %q",
-				clients[i].name)))
-
-			Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.ClusterSetIP), reportNonConformant(
-				fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
-		}
-
-		By("Unexporting the service")
-
-		t.deleteServiceExport(&clients[0])
-
-		for i := range clients {
-			t.awaitNoServiceImport(&clients[i], helloServiceName, fmt.Sprintf(
-				"the ServiceImport still exists on cluster %q after unexporting the service", clients[i].name))
-		}
-	})
-
-	// The prior test above also unexports the service and verifies the ServiceImport is deleted, but it doesn't require more than one
+	// Other tests also unexport the service and verifies the ServiceImport is deleted, but it doesn't require more than one
 	// cluster, so it provides basic coverage in a simple single cluster environment. The following test is more comprehensive in that it
 	// exports a service from two clusters and ensures proper behavior when unexported from both.
 	Specify("A ServiceImport should only exist as long as there's at least one exporting cluster", Label(RequiredLabel), func() {
@@ -97,20 +79,40 @@ var _ = Describe("", func() {
 		t.awaitNoServiceImport(&clients[0], helloServiceName,
 			"the ServiceImport still exists after unexporting the service on all clusters")
 	})
+}
 
-	Specify("The ports for a ServiceImport should match those of the exported service", Label(RequiredLabel), func() {
-		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-port")
+func testClusterIPServiceImport() {
+	t := newTestDriver()
 
-		serviceImport := t.awaitServiceImport(&clients[0], helloServiceName, func(serviceImport *v1alpha1.ServiceImport) bool {
-			return len(serviceImport.Spec.Ports) > 0
-		})
-		Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
+	JustBeforeEach(func() {
+		t.createServiceExport(&clients[0])
+	})
 
-		Expect(sortMCSPorts(serviceImport.Spec.Ports)).To(Equal(toMCSPorts(t.helloService.Spec.Ports)), reportNonConformant(""))
+	Specify("Exporting a ClusterIP service should create a ServiceImport of type ClusterSetIP in the service's namespace in each cluster. "+
+		"Unexporting should delete the ServiceImport", Label(RequiredLabel), func() {
+		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#importing-services")
+
+		for i := range clients {
+			serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, nil)
+			Expect(serviceImport).NotTo(BeNil(), reportNonConformant(fmt.Sprintf("ServiceImport was not found on cluster %q",
+				clients[i].name)))
+
+			Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.ClusterSetIP), reportNonConformant(
+				fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
+		}
+
+		By("Unexporting the service")
+
+		t.deleteServiceExport(&clients[0])
+
+		for i := range clients {
+			t.awaitNoServiceImport(&clients[i], helloServiceName, fmt.Sprintf(
+				"the ServiceImport still exists on cluster %q after unexporting the service", clients[i].name))
+		}
 	})
 
 	Specify("The SessionAffinity for a ClusterSetIP ServiceImport should match the exported service's SessionAffinity",
-		Label(RequiredLabel, ClusterIPLabel), func() {
+		Label(RequiredLabel), func() {
 			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#session-affinity")
 
 			serviceImport := t.awaitServiceImport(&clients[0], helloServiceName, nil)
@@ -122,7 +124,7 @@ var _ = Describe("", func() {
 				"The SessionAffinityConfig of the ServiceImport does not match the exported Service's SessionAffinityConfig"))
 		})
 
-	Specify("An IP should be allocated for a ClusterSetIP ServiceImport", Label(RequiredLabel, ClusterIPLabel), func() {
+	Specify("An IP should be allocated for a ClusterSetIP ServiceImport", Label(RequiredLabel), func() {
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#clustersetip")
 
 		serviceImport := t.awaitServiceImport(&clients[0], t.helloService.Name, func(serviceImport *v1alpha1.ServiceImport) bool {
@@ -135,7 +137,18 @@ var _ = Describe("", func() {
 			reportNonConformant(fmt.Sprintf("The value %q is not a valid IP", serviceImport.Spec.IPs[0])))
 	})
 
-	Context("A service exported on two clusters", func() {
+	Specify("The ports for a ClusterSetIP ServiceImport should match those of the exported service", Label(RequiredLabel), func() {
+		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-port")
+
+		serviceImport := t.awaitServiceImport(&clients[0], helloServiceName, func(serviceImport *v1alpha1.ServiceImport) bool {
+			return len(serviceImport.Spec.Ports) > 0
+		})
+		Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
+
+		Expect(sortMCSPorts(serviceImport.Spec.Ports)).To(Equal(toMCSPorts(t.helloService.Spec.Ports)), reportNonConformant(""))
+	})
+
+	Context("A ClusterIP service exported on two clusters", func() {
 		var helloService2 *corev1.Service
 
 		BeforeEach(func() {
@@ -200,4 +213,4 @@ var _ = Describe("", func() {
 			})
 		})
 	})
-})
+}

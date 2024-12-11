@@ -181,7 +181,9 @@ func newTestDriver() *testDriver {
 		// Clean up the shared namespace
 		for _, client := range clients {
 			err := client.k8s.CoreV1().Namespaces().Delete(ctx, t.namespace, metav1.DeleteOptions{})
-			Expect(err).ToNot(HaveOccurred())
+			if !apierrors.IsNotFound(err) {
+				Expect(err).ToNot(HaveOccurred())
+			}
 		}
 	})
 
