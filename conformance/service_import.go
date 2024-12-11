@@ -19,6 +19,7 @@ package conformance
 import (
 	"fmt"
 	"net"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -29,6 +30,7 @@ import (
 var (
 	_ = Describe("", testGeneralServiceImport)
 	_ = Describe("", Label(ClusterIPLabel), testClusterIPServiceImport)
+	_ = Describe("", Label(HeadlessLabel), testHeadlessServiceImport)
 )
 
 func testGeneralServiceImport() {
@@ -38,6 +40,7 @@ func testGeneralServiceImport() {
 	BeforeEach(func() {
 		helloServiceExport = newHelloServiceExport()
 	})
+
 	JustBeforeEach(func() {
 		t.createServiceExport(&clients[0], helloServiceExport)
 	})
@@ -269,5 +272,51 @@ func testClusterIPServiceImport() {
 					reportNonConformant("The service ports were not resolved correctly"))
 			})
 		})
+	})
+}
+
+func testHeadlessServiceImport() {
+	t := newTestDriver()
+
+	BeforeEach(func() {
+		t.helloService.Spec.ClusterIP = corev1.ClusterIPNone
+	})
+
+	JustBeforeEach(func() {
+		t.createServiceExport(&clients[0], newHelloServiceExport())
+	})
+
+	Specify("Exporting a headless service should create a ServiceImport of type Headless in the service's namespace in each cluster. "+
+		"Unexporting should delete the ServiceImport", Label(RequiredLabel), func() {
+		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-types")
+
+		for i := range clients {
+			serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, nil)
+			Expect(serviceImport).NotTo(BeNil(), reportNonConformant(fmt.Sprintf("ServiceImport was not found on cluster %q",
+				clients[i].name)))
+
+			Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.Headless), reportNonConformant(
+				fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
+		}
+
+		By("Unexporting the service")
+
+		t.deleteServiceExport(&clients[0])
+
+		for i := range clients {
+			t.awaitNoServiceImport(&clients[i], helloServiceName, fmt.Sprintf(
+				"the ServiceImport still exists on cluster %q after unexporting the service", clients[i].name))
+		}
+	})
+
+	Specify("No clusterset IP should be allocated for a Headless ServiceImport", Label(RequiredLabel), func() {
+		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#clustersetip")
+
+		serviceImport := t.awaitServiceImport(&clients[0], t.helloService.Name, nil)
+		Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
+
+		Consistently(func() []string {
+			return t.getServiceImport(&clients[0], t.helloService.Name).Spec.IPs
+		}).Within(5*time.Second).ProbeEvery(time.Second).Should(BeEmpty(), reportNonConformant(""))
 	})
 }
