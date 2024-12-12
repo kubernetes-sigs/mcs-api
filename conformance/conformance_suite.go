@@ -181,7 +181,9 @@ func newTestDriver() *testDriver {
 		// Clean up the shared namespace
 		for _, client := range clients {
 			err := client.k8s.CoreV1().Namespaces().Delete(ctx, t.namespace, metav1.DeleteOptions{})
-			Expect(err).ToNot(HaveOccurred())
+			if !apierrors.IsNotFound(err) {
+				Expect(err).ToNot(HaveOccurred())
+			}
 		}
 	})
 
@@ -206,6 +208,18 @@ func (t *testDriver) deployHelloService(c *clusterClients, service *corev1.Servi
 	Expect(err).ToNot(HaveOccurred())
 }
 
+func (t *testDriver) getServiceImport(c *clusterClients, name string) *v1alpha1.ServiceImport {
+	si, err := c.mcs.MulticlusterV1alpha1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) || errors.Is(err, context.DeadlineExceeded) ||
+		(err != nil && strings.Contains(err.Error(), "rate limiter")) {
+		return nil
+	}
+
+	Expect(err).ToNot(HaveOccurred(), "Error retrieving ServiceImport")
+
+	return si
+}
+
 func (t *testDriver) awaitServiceImport(c *clusterClients, name string, verify func(*v1alpha1.ServiceImport) bool) *v1alpha1.ServiceImport {
 	var serviceImport *v1alpha1.ServiceImport
 
@@ -213,13 +227,10 @@ func (t *testDriver) awaitServiceImport(c *clusterClients, name string, verify f
 		20*time.Second, true, func(ctx context.Context) (bool, error) {
 			defer GinkgoRecover()
 
-			si, err := c.mcs.MulticlusterV1alpha1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
-			if apierrors.IsNotFound(err) || errors.Is(err, context.DeadlineExceeded) ||
-				(err != nil && strings.Contains(err.Error(), "rate limiter")) {
+			si := t.getServiceImport(c, name)
+			if si == nil {
 				return false, nil
 			}
-
-			Expect(err).ToNot(HaveOccurred(), "Error retrieving ServiceImport")
 
 			serviceImport = si
 
