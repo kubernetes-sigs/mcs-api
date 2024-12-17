@@ -58,6 +58,20 @@ spec:
               type: string
             metadata:
               type: object
+            spec:
+              description: spec defines the behavior of a ServiceExport.
+              type: object
+              properties:
+                exportedAnnotations:
+                  description: exportedAnnotations describes the annotations exported. It is optional for implementation.
+                  type: object
+                  additionalProperties:
+                    type: string
+                exportedLabels:
+                  description: exportedLabels describes the labels exported. It is optional for implementation.
+                  type: object
+                  additionalProperties:
+                    type: string
             status:
               description: |-
                 status describes the current state of an exported service.

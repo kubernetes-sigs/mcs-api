@@ -33,7 +33,7 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, ClusterIPLabel), func() {
 	t := newTestDriver()
 
 	JustBeforeEach(func() {
-		t.createServiceExport(&clients[0])
+		t.createServiceExport(&clients[0], newHelloServiceExport())
 	})
 
 	Specify("A DNS lookup of the <service>.<ns>.svc.clusterset.local domain for a ClusterIP service should resolve to the "+
