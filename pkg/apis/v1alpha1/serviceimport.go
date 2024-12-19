@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // +genclient
@@ -107,6 +108,19 @@ type ServicePort struct {
 
 	// The port that will be exposed by this service.
 	Port int32 `json:"port"`
+
+	// Number or name of the port to access on the pods targeted by the service.
+	// Number must be in the range 1 to 65535. Name must be an IANA_SVC_NAME.
+	// If this is a string, it will be looked up as a named port in the
+	// target Pod's container ports. If this is not specified, the value
+	// of the 'port' field is used (an identity map).
+	// This field is ignored for services with clusterIP=None, and should be
+	// omitted or set equal to the 'port' field.
+	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service
+	//
+	// This may not be populated depending on the MCS-API implementation context.
+	// +optional
+	TargetPort intstr.IntOrString `json:"targetPort,omitempty"`
 }
 
 // ServiceImportStatus describes derived state of an imported service.
