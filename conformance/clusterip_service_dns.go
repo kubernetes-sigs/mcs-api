@@ -42,20 +42,20 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, ClusterIPLabel), func() {
 
 		By("Retrieving ServiceImport")
 
-		serviceImport := t.awaitServiceImport(&clients[0], t.helloService.Name, func(serviceImport *v1alpha1.ServiceImport) bool {
-			return len(serviceImport.Spec.IPs) > 0
-		})
-
-		Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
-		Expect(serviceImport.Spec.IPs).ToNot(BeEmpty(), "ServiceImport does not contain an IP")
-
-		clusterSetIP := serviceImport.Spec.IPs[0]
-
-		By(fmt.Sprintf("Found ServiceImport with clusterset IP %q", clusterSetIP))
+		serviceImports := []*v1alpha1.ServiceImport{}
+		for _, client := range clients {
+			serviceImport := t.awaitServiceImport(&client, t.helloService.Name, func(serviceImport *v1alpha1.ServiceImport) bool {
+				return len(serviceImport.Spec.IPs) > 0
+			})
+			Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found on cluster %q", client.name)
+			Expect(serviceImport.Spec.IPs).ToNot(BeEmpty(), "ServiceImport on cluster %q does not contain an IP", client.name)
+			serviceImports = append(serviceImports, serviceImport)
+		}
 
 		command := []string{"sh", "-c", fmt.Sprintf("nslookup %s.%s.svc.clusterset.local", t.helloService.Name, t.namespace)}
-
-		for _, client := range clients {
+		for i, client := range clients {
+			clusterSetIP := serviceImports[i].Spec.IPs[0]
+			By(fmt.Sprintf("Found ServiceImport on cluster %q with clusterset IP %q", client.name, clusterSetIP))
 			By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), client.name))
 
 			t.awaitCmdOutputContains(&client, command, clusterSetIP, 1, reportNonConformant(""))
