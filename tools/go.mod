@@ -1,6 +1,6 @@
 module github.com/kubernetes-sigs/mcs-api/tools
 
-go 1.22.4
+go 1.23.0
 
 require (
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616
