@@ -17,7 +17,7 @@ readonly  reset=$(tput sgr0)
 readonly  green=$(tput bold; tput setaf 2)
 readonly yellow=$(tput bold; tput setaf 3)
 readonly   blue=$(tput bold; tput setaf 6)
-readonly timeout=$(if [ "$(uname)" == "Darwin" ]; then echo "1"; else echo "0.1"; fi) 
+readonly timeout=$(if [ "$(uname)" == "Darwin" ]; then echo "1"; else echo "0.1"; fi)
 
 function desc() {
     maybe_first_prompt
@@ -52,7 +52,11 @@ function run() {
       sleep 0.5
     fi
     OFILE="$(mktemp -t $(basename $0).XXXXXX)"
-    script -eq -c "$1" -f "$OFILE"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        script -q -a "$OFILE" bash -c "$1"
+    else
+        script -eq -c "$1" -f "$OFILE"
+    fi
     r=$?
     read -d '' -t "${timeout}" -n 10000 # clear stdin
     prompt
