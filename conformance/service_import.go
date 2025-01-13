@@ -38,6 +38,17 @@ var _ = Describe("", func() {
 		t.createServiceExport(&clients[0], helloServiceExport)
 	})
 
+	assertHasKeyValues := func(actual, expected map[string]string) {
+		for k, v := range expected {
+			Expect(actual).To(HaveKeyWithValue(k, v), reportNonConformant(""))
+		}
+	}
+	assertNotHasKeyValues := func(actual, expected map[string]string) {
+		for k, v := range expected {
+			Expect(actual).ToNot(HaveKeyWithValue(k, v), reportNonConformant(""))
+		}
+	}
+
 	Specify("Exporting a ClusterIP service should create a ServiceImport of type ClusterSetIP in the service's namespace in each cluster. "+
 		"Unexporting should delete the ServiceImport",
 		Label(RequiredLabel), func() {
@@ -231,8 +242,11 @@ var _ = Describe("", func() {
 					})
 					Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
 
-					Expect(serviceImport.Annotations).To(Equal(helloServiceExport.Spec.ExportedAnnotations), reportNonConformant(""))
-					Expect(serviceImport.Labels).To(Equal(helloServiceExport.Spec.ExportedLabels), reportNonConformant(""))
+					assertHasKeyValues(serviceImport.Annotations, helloServiceExport.Annotations)
+					assertNotHasKeyValues(serviceImport.Annotations, helloServiceExport2.Annotations)
+
+					assertHasKeyValues(serviceImport.Labels, helloServiceExport.Labels)
+					assertNotHasKeyValues(serviceImport.Labels, helloServiceExport2.Labels)
 				})
 		})
 	})
@@ -252,8 +266,8 @@ var _ = Describe("", func() {
 				})
 				Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
 
-				Expect(serviceImport.Annotations).To(Equal(helloServiceExport.Spec.ExportedAnnotations), reportNonConformant(""))
-				Expect(serviceImport.Labels).To(Equal(helloServiceExport.Spec.ExportedLabels), reportNonConformant(""))
+				assertHasKeyValues(serviceImport.Annotations, helloServiceExport.Annotations)
+				assertHasKeyValues(serviceImport.Labels, helloServiceExport.Labels)
 			})
 	})
 })
