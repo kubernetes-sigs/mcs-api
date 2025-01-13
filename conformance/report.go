@@ -38,6 +38,7 @@ const (
 	DNSLabel                 = "DNS"
 	ConnectivityLabel        = "Connectivity"
 	ClusterIPLabel           = "ClusterIP"
+	HeadlessLabel            = "Headless"
 	EndpointSliceLabel       = "EndpointSlice"
 	ExportedLabelsLabel      = "ExportedLabels"
 	SpecRefReportEntry       = "spec-ref"
