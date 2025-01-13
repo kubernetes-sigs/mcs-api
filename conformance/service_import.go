@@ -267,7 +267,10 @@ var _ = Describe("", func() {
 				Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
 
 				assertHasKeyValues(serviceImport.Annotations, helloServiceExport.Annotations)
+				assertNotHasKeyValues(serviceImport.Annotations, t.helloService.Annotations)
+
 				assertHasKeyValues(serviceImport.Labels, helloServiceExport.Labels)
+				assertNotHasKeyValues(serviceImport.Labels, t.helloService.Labels)
 			})
 	})
 })
