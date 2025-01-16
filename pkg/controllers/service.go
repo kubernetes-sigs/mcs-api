@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	"slices"
 
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
@@ -64,12 +65,16 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	if len(svcImport.Spec.IPs) > 0 {
+	ipsLen := min(2, len(service.Spec.ClusterIPs))
+	desiredIPs := service.Spec.ClusterIPs[:ipsLen]
+	if service.Spec.ClusterIP == v1.ClusterIPNone {
+		desiredIPs = []string{}
+	}
+	if slices.Equal(desiredIPs, svcImport.Spec.IPs) {
 		return ctrl.Result{}, nil
 	}
 
-	ipsLen := min(2, len(service.Spec.ClusterIPs))
-	svcImport.Spec.IPs = service.Spec.ClusterIPs[:ipsLen]
+	svcImport.Spec.IPs = desiredIPs
 	if err := r.Client.Update(ctx, &svcImport); err != nil {
 		return ctrl.Result{}, err
 	}
