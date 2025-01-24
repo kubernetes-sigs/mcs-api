@@ -49,12 +49,12 @@ controller: generate fmt vet
 # Run go fmt against code
 .PHONY: fmt
 fmt:
-	for m in . e2e; do go -C $$m fmt ./...; done
+	for m in . conformance e2e; do go -C $$m fmt ./...; done
 
 # Run go vet against code
 .PHONY: vet
 vet:
-	for m in . e2e; do go -C $$m vet ./...; done
+	for m in . conformance e2e; do go -C $$m vet ./...; done
 
 # Run generators for Deepcopy funcs and CRDs
 .PHONY: generate
