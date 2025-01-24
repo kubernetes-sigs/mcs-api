@@ -35,4 +35,4 @@ function cleanup() {
 trap cleanup EXIT
 
 ./up.sh
-go run github.com/onsi/ginkgo/v2/ginkgo ../e2etest
+go -C ../e2e run github.com/onsi/ginkgo/v2/ginkgo .
