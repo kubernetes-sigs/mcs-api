@@ -39,7 +39,7 @@ if [ ! -z "${BUILD_CONTROLLER}" ] || [ -z "$(docker images mcs-api-controller -q
   popd
 fi
 
-coredns_version="1.11.1"
+coredns_version="1.11.4"
 coredns_image="multicluster/coredns:latest"
 coredns_path="/tmp/coredns-${coredns_version}"
 if [ ! -d "${coredns_path}" ]; then
