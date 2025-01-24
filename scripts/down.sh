@@ -16,8 +16,10 @@
 
 set -e
 
+cd $(dirname ${BASH_SOURCE})
+
 kind() {
-  go run sigs.k8s.io/kind "$@"
+  go -C ../controllers run sigs.k8s.io/kind "$@"
 }
 
 c1=${CLUSTER1:-c1}
