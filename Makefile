@@ -44,17 +44,17 @@ demo: docker-build
 # Build controller binary
 .PHONY: controller
 controller: generate fmt vet
-	go build -o bin/manager cmd/servicecontroller/servicecontroller.go
+	go -C controllers build -o $(ROOT)/bin/manager cmd/servicecontroller/servicecontroller.go
 
 # Run go fmt against code
 .PHONY: fmt
 fmt:
-	go fmt ./...
+	for m in . conformance controllers e2e; do go -C $$m fmt ./...; done
 
 # Run go vet against code
 .PHONY: vet
 vet:
-	go vet ./...
+	for m in . conformance controllers e2e; do go -C $$m vet ./...; done
 
 # Run generators for Deepcopy funcs and CRDs
 .PHONY: generate
@@ -70,7 +70,7 @@ manifests:
 # Run tests
 .PHONY: test
 test: generate fmt vet manifests
-	go test ./pkg/... -coverprofile cover.out
+	for m in . controllers; do go -C $$m test ./... -coverprofile cover.out; done
 
 # Install CRD's and example resources to a pre-existing cluster.
 .PHONY: install

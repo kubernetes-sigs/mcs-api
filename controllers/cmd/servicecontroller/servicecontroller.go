@@ -27,8 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/mcs-api/controllers"
 	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
-	"sigs.k8s.io/mcs-api/pkg/controllers"
 )
 
 var (

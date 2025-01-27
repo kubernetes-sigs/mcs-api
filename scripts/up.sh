@@ -21,13 +21,13 @@ cd $(dirname ${BASH_SOURCE})
 set -e
 
 kind() {
-  go run sigs.k8s.io/kind "$@"
+  go -C ../controllers run sigs.k8s.io/kind "$@"
 }
 
 c1=${CLUSTER1:-c1}
 c2=${CLUSTER2:-c2}
-kubeconfig1=${KUBECONFIG1:-"${c1}.kubeconfig"}
-kubeconfig2=${KUBECONFIG2:-"${c2}.kubeconfig"}
+kubeconfig1=${KUBECONFIG1:-"$PWD/${c1}.kubeconfig"}
+kubeconfig2=${KUBECONFIG2:-"$PWD/${c2}.kubeconfig"}
 controller_image=${MCS_CONTROLLER_IMAGE:-"mcs-api-controller"}
 
 k1="kubectl --kubeconfig ${kubeconfig1}"
@@ -56,8 +56,8 @@ make
 docker build -t "${coredns_image}" .
 popd
 
-kind create cluster --name "${c1}" --config "${c1}.yaml"
-kind create cluster --name "${c2}" --config "${c2}.yaml"
+kind create cluster --name "${c1}" --config "$PWD/${c1}.yaml"
+kind create cluster --name "${c2}" --config "$PWD/${c2}.yaml"
 
 kind get kubeconfig --name "${c1}" > "${kubeconfig1}"
 kind get kubeconfig --name "${c2}" > "${kubeconfig2}"
