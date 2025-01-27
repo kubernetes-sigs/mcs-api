@@ -23,6 +23,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,11 +34,32 @@ import (
 // K8sEndpointSliceManagedByName is the name used for endpoint slices managed by the Kubernetes controller
 const K8sEndpointSliceManagedByName = "endpointslice-controller.k8s.io"
 
+// ServiceExportEndpointSliceHook is a hook meant to customize the ServiceExport
+// resource before its creation in EndpointSlice related tests to integrate with
+// MCS-API implementations requiring user to explicitly opt-in to enable
+// EndpointSlice synchronization from remote clusters.
+var ServiceExportEndpointSliceHook = func(serviceExport *v1alpha1.ServiceExport) *v1alpha1.ServiceExport {
+	return serviceExport
+}
+
+// ServiceEndpointSliceHook is a hook meant to customize the Service
+// resource in EndpointSlice related tests to integrate with MCS-API implementations
+// requiring user to explicitly opt-in to enable EndpointSlice synchronization from
+// remote clusters.
+var ServiceEndpointSliceHook func(service *corev1.Service) *corev1.Service
+
 var _ = Describe("", Label(OptionalLabel, EndpointSliceLabel), func() {
 	t := newTestDriver()
 
 	JustBeforeEach(func() {
-		t.createServiceExport(&clients[0], newHelloServiceExport())
+		if ServiceEndpointSliceHook != nil {
+			Expect(
+				clients[0].k8s.CoreV1().Services(t.helloService.Namespace).Update(
+					context.TODO(), ServiceEndpointSliceHook(t.helloService), metav1.UpdateOptions{},
+				),
+			).ToNot(HaveOccurred(), "Error Updating Services in EndpointSlice hook")
+		}
+		t.createServiceExport(&clients[0], ServiceExportEndpointSliceHook(newHelloServiceExport()))
 	})
 
 	Specify("Exporting a service should create an MCS EndpointSlice in the service's namespace in each cluster with the "+
