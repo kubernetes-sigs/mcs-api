@@ -34,7 +34,7 @@ type ServiceImport struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// +listType=atomic
-	Ports []v1.ServicePort `json:"ports"`
+	Ports []ServicePort `json:"ports"`
 	// ips will be used as the VIP(s) for this service when type is ClusterSetIP.
 	// +kubebuilder:validation:MaxItems:=2
 	// +optional
@@ -79,6 +79,44 @@ type ServiceImport struct {
 	// +listType=map
 	// +listMapKey=cluster
 	Clusters []ClusterStatus `json:"clusters,omitempty"`
+}
+
+// ServicePort contains information on service's port.
+type ServicePort struct {
+	// The name of this port within the service. This must be a DNS_LABEL.
+	// All ports within a ServiceSpec must have unique names. When considering
+	// the endpoints for a Service, this must match the 'name' field in the
+	// EndpointPort.
+	// Optional if only one ServicePort is defined on this service.
+	// +optional
+	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+
+	// The IP protocol for this port. Supports "TCP", "UDP", and "SCTP".
+	// Default is TCP.
+	// +default="TCP"
+	// +optional
+	Protocol v1.Protocol `json:"protocol,omitempty" protobuf:"bytes,2,opt,name=protocol,casttype=Protocol"`
+
+	// The application protocol for this port.
+	// This is used as a hint for implementations to offer richer behavior for protocols that they understand.
+	// This field follows standard Kubernetes label syntax.
+	// Valid values are either:
+	//
+	// * Un-prefixed protocol names - reserved for IANA standard service names (as per
+	// RFC-6335 and https://www.iana.org/assignments/service-names).
+	//
+	// * Kubernetes-defined prefixed names:
+	//   * 'kubernetes.io/h2c' - HTTP/2 prior knowledge over cleartext as described in https://www.rfc-editor.org/rfc/rfc9113.html#name-starting-http-2-with-prior-
+	//   * 'kubernetes.io/ws'  - WebSocket over cleartext as described in https://www.rfc-editor.org/rfc/rfc6455
+	//   * 'kubernetes.io/wss' - WebSocket over TLS as described in https://www.rfc-editor.org/rfc/rfc6455
+	//
+	// * Other protocols should use implementation-defined prefixed names such as
+	// mycompany.com/my-custom-protocol.
+	// +optional
+	AppProtocol *string `json:"appProtocol,omitempty" protobuf:"bytes,6,opt,name=appProtocol"`
+
+	// The port that will be exposed by this service.
+	Port int32 `json:"port" protobuf:"varint,3,opt,name=port"`
 }
 
 // ServiceImportType designates the type of a ServiceImport
