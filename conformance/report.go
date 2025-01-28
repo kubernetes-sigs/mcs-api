@@ -25,6 +25,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync/atomic"
 
 	. "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/ginkgo/v2/types"
@@ -66,7 +67,14 @@ type testGrouping struct {
 	Tests []testInfo
 }
 
-var errorRegEx *regexp.Regexp
+var (
+	errorRegEx *regexp.Regexp
+	// currentSpecNonConformanceMsg holds the last non-conformance message emitted by the current spec. Using
+	// Eventually with a function that takes a Gomega, different assertions could report non-conformance on
+	// successive retries, so we want to just report the last one. This also allows the last message to be cleared
+	// (via cancelNonConformanceReport()) if it eventually succeeded.
+	currentSpecNonConformanceMsg atomic.Value
+)
 
 func init() {
 	dummyErr := errors.New("dummy")
@@ -83,10 +91,26 @@ func init() {
 	//  occurred"
 	//
 	// In this case, we want to match and extract: "Error retrieving resource" and ""foo" not found".
-	errorRegEx = regexp.MustCompile(fmt.Sprintf(`\s*(.*)\s*(?:%s|%s)[^:]*:([^{]*)`,
+	errorRegEx = regexp.MustCompile(fmt.Sprintf(`\s*(.*)\s*(?:%s|%s|The function passed to)\s*.*\s*(.*)`,
 		firstLine((&matchers.HaveOccurredMatcher{}).NegatedFailureMessage(dummyErr)),
 		firstLine((&matchers.SucceedMatcher{}).FailureMessage(dummyErr))))
 }
+
+var _ = ReportBeforeEach(func(_ SpecReport) {
+	cancelNonConformanceReport()
+})
+
+var _ = ReportAfterEach(func(specReport SpecReport) {
+	if specReport.LeafNodeType != types.NodeTypeIt || specReport.State == types.SpecStatePending ||
+		specReport.State == types.SpecStateSkipped {
+		return
+	}
+
+	msg := currentSpecNonConformanceMsg.Swap("")
+	if msg != "" {
+		AddReportEntry(NonConformantReportEntry, msg, types.ReportEntryVisibilityNever)
+	}
+})
 
 var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 	testGroupMap := map[string]*testGrouping{}
@@ -120,11 +144,16 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 			}
 
 			for i := range specReport.ReportEntries {
-				if specReport.ReportEntries[i].Name == SpecRefReportEntry {
+				switch specReport.ReportEntries[i].Name {
+				case SpecRefReportEntry:
 					info.Ref = specReport.ReportEntries[i].GetRawValue().(string)
-				} else if specReport.ReportEntries[i].Name == NonConformantReportEntry {
-					info.Conformant = false
-					info.Message = specReport.ReportEntries[i].GetRawValue().(string)
+				case NonConformantReportEntry:
+					// An assertion reporting non-conformance may have failed initially but eventually succeeded after retries
+					// so only report non-conformance if the spec actually failed.
+					if specReport.State != types.SpecStatePassed {
+						info.Conformant = false
+						info.Message = specReport.ReportEntries[i].GetRawValue().(string)
+					}
 				}
 			}
 
@@ -181,7 +210,7 @@ func parseFailureMessage(s string) string {
 		if msg == "" {
 			msg = strings.TrimSpace(matches[2])
 		} else {
-			msg = msg + ": " + strings.TrimSpace(matches[2])
+			msg = strings.TrimSuffix(msg, ".") + ": " + strings.TrimSpace(matches[2])
 		}
 
 		return msg
@@ -201,7 +230,11 @@ func firstLine(s string) string {
 // that to add a report entry indicating non-conformance.
 func reportNonConformant(msg string) func() string {
 	return func() string {
-		AddReportEntry(NonConformantReportEntry, msg)
+		currentSpecNonConformanceMsg.Store(msg)
 		return msg
 	}
+}
+
+func cancelNonConformanceReport() {
+	currentSpecNonConformanceMsg.Store("")
 }
