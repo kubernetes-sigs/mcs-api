@@ -30,6 +30,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -143,9 +145,10 @@ func setupClients() error {
 }
 
 type testDriver struct {
-	namespace    string
-	helloService *corev1.Service
-	requestPod   *corev1.Pod
+	namespace       string
+	helloService    *corev1.Service
+	helloDeployment *appsv1.Deployment
+	requestPod      *corev1.Pod
 }
 
 func newTestDriver() *testDriver {
@@ -154,6 +157,7 @@ func newTestDriver() *testDriver {
 	BeforeEach(func() {
 		t.namespace = fmt.Sprintf("mcs-conformance-%v", rand.Uint32())
 		t.helloService = newHelloService()
+		t.helloDeployment = newHelloDeployment()
 		t.requestPod = newRequestPod()
 	})
 
@@ -202,9 +206,12 @@ func (t *testDriver) deleteServiceExport(c *clusterClients) {
 }
 
 func (t *testDriver) deployHelloService(c *clusterClients, service *corev1.Service) {
-	_, err := c.k8s.AppsV1().Deployments(t.namespace).Create(ctx, newHelloDeployment(), metav1.CreateOptions{})
-	Expect(err).ToNot(HaveOccurred())
-	_, err = c.k8s.CoreV1().Services(t.namespace).Create(ctx, service, metav1.CreateOptions{})
+	if t.helloDeployment != nil {
+		_, err := c.k8s.AppsV1().Deployments(t.namespace).Create(ctx, t.helloDeployment, metav1.CreateOptions{})
+		Expect(err).ToNot(HaveOccurred())
+	}
+
+	_, err := c.k8s.CoreV1().Services(t.namespace).Create(ctx, service, metav1.CreateOptions{})
 	Expect(err).ToNot(HaveOccurred())
 }
 
@@ -293,10 +300,19 @@ func (t *testDriver) execCmdOnRequestPod(c *clusterClients, command []string) st
 	return string(stdout)
 }
 
-func (t *testDriver) awaitCmdOutputContains(c *clusterClients, command []string, expectedString string, nIter int, msg func() string) {
+func (t *testDriver) awaitCmdOutputMatches(c *clusterClients, command []string, expected any, nIter int, msg func() string) {
+	var matcher types.GomegaMatcher
+
+	switch v := expected.(type) {
+	case string:
+		matcher = ContainSubstring(v)
+	case types.GomegaMatcher:
+		matcher = v
+	}
+
 	Eventually(func(g Gomega) {
 		output := t.execCmdOnRequestPod(c, command)
-		g.Expect(output).To(ContainSubstring(expectedString), "Command output")
+		g.Expect(output).To(matcher, "Command output")
 	}).Within(time.Duration(20*int64(nIter))*time.Second).ProbeEvery(time.Second).MustPassRepeatedly(nIter).Should(Succeed(), msg)
 }
 

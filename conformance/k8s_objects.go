@@ -67,6 +67,41 @@ func newHelloServiceExport() *v1alpha1.ServiceExport {
 	}
 }
 
+func podContainers() []corev1.Container {
+	return []corev1.Container{
+		{
+			Name:  "hello-tcp",
+			Image: "alpine/socat:1.7.4.4",
+			Args:  []string{"-v", "-v", "TCP-LISTEN:42,crlf,reuseaddr,fork", "SYSTEM:echo pod ip $(MY_POD_IP)"},
+			Env: []corev1.EnvVar{
+				{
+					Name: "MY_POD_IP",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "status.podIP",
+						},
+					},
+				},
+			},
+		},
+		{
+			Name:  "hello-udp",
+			Image: "alpine/socat:1.7.4.4",
+			Args:  []string{"-v", "-v", "UDP-LISTEN:42,crlf,reuseaddr,fork", "SYSTEM:echo pod ip $(MY_POD_IP)"},
+			Env: []corev1.EnvVar{
+				{
+					Name: "MY_POD_IP",
+					ValueFrom: &corev1.EnvVarSource{
+						FieldRef: &corev1.ObjectFieldSelector{
+							FieldPath: "status.podIP",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func newHelloDeployment() *appsv1.Deployment {
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -84,38 +119,35 @@ func newHelloDeployment() *appsv1.Deployment {
 					Labels: map[string]string{"app": helloServiceName},
 				},
 				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "hello-tcp",
-							Image: "alpine/socat:1.7.4.4",
-							Args:  []string{"-v", "-v", "TCP-LISTEN:42,crlf,reuseaddr,fork", "SYSTEM:echo pod ip $(MY_POD_IP)"},
-							Env: []corev1.EnvVar{
-								{
-									Name: "MY_POD_IP",
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "status.podIP",
-										},
-									},
-								},
-							},
-						},
-						{
-							Name:  "hello-udp",
-							Image: "alpine/socat:1.7.4.4",
-							Args:  []string{"-v", "-v", "UDP-LISTEN:42,crlf,reuseaddr,fork", "SYSTEM:echo pod ip $(MY_POD_IP)"},
-							Env: []corev1.EnvVar{
-								{
-									Name: "MY_POD_IP",
-									ValueFrom: &corev1.EnvVarSource{
-										FieldRef: &corev1.ObjectFieldSelector{
-											FieldPath: "status.podIP",
-										},
-									},
-								},
-							},
-						},
+					Containers: podContainers(),
+				},
+			},
+		},
+	}
+}
+
+func newStatefulSet(replicas int) *appsv1.StatefulSet {
+	return &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: helloServiceName + "-ss",
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": helloServiceName,
+				},
+			},
+			ServiceName: helloServiceName,
+			Replicas:    ptr.To(int32(replicas)),
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": helloServiceName,
 					},
+				},
+				Spec: corev1.PodSpec{
+					Containers:    podContainers(),
+					RestartPolicy: corev1.RestartPolicyAlways,
 				},
 			},
 		},

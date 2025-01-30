@@ -64,7 +64,7 @@ var _ = Describe("", func() {
 				for _, client := range clients {
 					By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), client.name))
 
-					t.awaitCmdOutputContains(&client, command, "pod ip", 1, reportNonConformant(""))
+					t.awaitCmdOutputMatches(&client, command, "pod ip", 1, reportNonConformant(""))
 				}
 			})
 		})
@@ -111,7 +111,7 @@ var _ = Describe("", func() {
 			for _, client := range clients {
 				By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), client.name))
 
-				t.awaitCmdOutputContains(&client, command, servicePodIP, 10, reportNonConformant(""))
+				t.awaitCmdOutputMatches(&client, command, servicePodIP, 10, reportNonConformant(""))
 			}
 		})
 	})
