@@ -53,7 +53,7 @@ if ! grep -q -F 'multicluster:github.com/coredns/multicluster' "plugin.cfg"; the
 fi
 docker run --rm \
     -v $PWD:/go/src/github.com/coredns/coredns -w /go/src/github.com/coredns/coredns \
-        golang:1.23 sh -c 'GOFLAGS="-buildvcs=false" make gen && GOFLAGS="-buildvcs=false" make'
+        golang:1.23 make gen coredns GOFLAGS=-buildvcs=false
 docker build -t "${coredns_image}" .
 popd
 

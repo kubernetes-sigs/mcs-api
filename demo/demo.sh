@@ -16,15 +16,16 @@
 
 # Resolve the absolute path to this script directory.
 cd $(dirname "${BASH_SOURCE[0]}")
-script_dir="$(pwd)"
+demo_dir=$(realpath "$(pwd)")
+scripts_dir=$(realpath "$(pwd)/../scripts")
 
-. "${script_dir}/udemo.sh"
-. "${script_dir}/../scripts/util.sh"
+. "${demo_dir}/udemo.sh"
+. "${scripts_dir}/util.sh"
 
 DEMO_AUTO_RUN=true
 
-kubeconfig1="${KUBECONFIG1:-$(realpath "${script_dir}/../scripts/c1.kubeconfig")}"
-kubeconfig2="${KUBECONFIG2:-$(realpath "${script_dir}/../scripts/c2.kubeconfig")}"
+kubeconfig1="${KUBECONFIG1:-${scripts_dir}/c1.kubeconfig}"
+kubeconfig2="${KUBECONFIG2:-${scripts_dir}/c2.kubeconfig}"
 
 k1="kubectl --kubeconfig ${kubeconfig1}"
 k2="kubectl --kubeconfig ${kubeconfig2}"
