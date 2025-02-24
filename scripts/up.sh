@@ -44,15 +44,16 @@ coredns_image="multicluster/coredns:latest"
 coredns_path="/tmp/coredns-${coredns_version}"
 if [ ! -d "${coredns_path}" ]; then
   pushd /tmp
-  curl -fLO "https://github.com/coredns/coredns/archive/refs/tags/v${coredns_version}.tar.gz"
-  tar xf v${coredns_version}.tar.gz
+  git clone --depth 1 https://github.com/coredns/coredns.git --branch v${coredns_version} --single-branch "${coredns_path}"
   popd
 fi
 pushd "${coredns_path}"
 if ! grep -q -F 'multicluster:github.com/coredns/multicluster' "plugin.cfg"; then
   sed -i -e 's/^kubernetes:kubernetes$/&\nmulticluster:github.com\/coredns\/multicluster/' "plugin.cfg"
 fi
-make
+docker run --rm \
+    -v $PWD:/go/src/github.com/coredns/coredns -w /go/src/github.com/coredns/coredns \
+        golang:1.23 make gen coredns GOFLAGS=-buildvcs=false
 docker build -t "${coredns_image}" .
 popd
 
