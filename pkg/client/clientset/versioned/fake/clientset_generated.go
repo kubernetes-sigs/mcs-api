@@ -27,6 +27,8 @@ import (
 	clientset "sigs.k8s.io/mcs-api/pkg/client/clientset/versioned"
 	multiclusterv1alpha1 "sigs.k8s.io/mcs-api/pkg/client/clientset/versioned/typed/apis/v1alpha1"
 	fakemulticlusterv1alpha1 "sigs.k8s.io/mcs-api/pkg/client/clientset/versioned/typed/apis/v1alpha1/fake"
+	multiclusterv1alpha2 "sigs.k8s.io/mcs-api/pkg/client/clientset/versioned/typed/apis/v1alpha2"
+	fakemulticlusterv1alpha2 "sigs.k8s.io/mcs-api/pkg/client/clientset/versioned/typed/apis/v1alpha2/fake"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
@@ -82,4 +84,9 @@ var (
 // MulticlusterV1alpha1 retrieves the MulticlusterV1alpha1Client
 func (c *Clientset) MulticlusterV1alpha1() multiclusterv1alpha1.MulticlusterV1alpha1Interface {
 	return &fakemulticlusterv1alpha1.FakeMulticlusterV1alpha1{Fake: &c.Fake}
+}
+
+// MulticlusterV1alpha2 retrieves the MulticlusterV1alpha2Client
+func (c *Clientset) MulticlusterV1alpha2() multiclusterv1alpha2.MulticlusterV1alpha2Interface {
+	return &fakemulticlusterv1alpha2.FakeMulticlusterV1alpha2{Fake: &c.Fake}
 }
