@@ -17,7 +17,6 @@ limitations under the License.
 package conformance
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -26,7 +25,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
 
@@ -47,23 +45,18 @@ var _ = Describe("", Label(OptionalLabel, EndpointSliceLabel), func() {
 		endpointSlices := make([]*discoveryv1.EndpointSlice, len(clients))
 
 		for i, client := range clients {
-			eps := t.awaitMCSEndpointSlice(&client)
-			Expect(eps).ToNot(BeNil(), reportNonConformant(fmt.Sprintf(
+			eps := t.awaitMCSEndpointSlice(&client, discoveryv1.AddressTypeIPv4, nil, reportNonConformant(fmt.Sprintf(
 				"an MCS EndpointSlice was not found on cluster %q. An MCS EndpointSlice is identified by the presence "+
-					"of at least one of the required MCS labels, whose names are prefixed with \"multicluster.kubernetes.io\". "+
+					"of the required MCS labels (%q and %q). "+
 					"If the MCS implementation does not use MCS EndpointSlices, you can specify a Ginkgo label filter using "+
 					"the %q label where appropriate to skip this test.",
-				client.name, EndpointSliceLabel)))
+				client.name, v1alpha1.LabelServiceName, v1alpha1.LabelSourceCluster, EndpointSliceLabel)))
 
 			endpointSlices[i] = eps
 
 			Expect(eps.Labels).To(HaveKeyWithValue(v1alpha1.LabelServiceName, t.helloService.Name),
 				reportNonConformant(fmt.Sprintf("the MCS EndpointSlice %q does not contain the %q label referencing the service name",
 					eps.Name, v1alpha1.LabelServiceName)))
-
-			Expect(eps.Labels).To(HaveKey(v1alpha1.LabelSourceCluster),
-				reportNonConformant(fmt.Sprintf("the MCS EndpointSlice %q does not contain the %q label",
-					eps.Name, v1alpha1.LabelSourceCluster)))
 
 			Expect(eps.Labels).To(HaveKey(discoveryv1.LabelManagedBy),
 				reportNonConformant(fmt.Sprintf("the MCS EndpointSlice %q does not contain the %q label",
@@ -90,7 +83,8 @@ var _ = Describe("", Label(OptionalLabel, EndpointSliceLabel), func() {
 	})
 })
 
-func (t *testDriver) awaitMCSEndpointSlice(c *clusterClients) *discoveryv1.EndpointSlice {
+func (t *testDriver) awaitMCSEndpointSlice(c *clusterClients, addressType discoveryv1.AddressType,
+	verify func(Gomega, *discoveryv1.EndpointSlice), desc ...any) *discoveryv1.EndpointSlice {
 	var endpointSlice *discoveryv1.EndpointSlice
 
 	hasLabel := func(eps *discoveryv1.EndpointSlice, label string) bool {
@@ -98,24 +92,29 @@ func (t *testDriver) awaitMCSEndpointSlice(c *clusterClients) *discoveryv1.Endpo
 		return exists
 	}
 
-	_ = wait.PollUntilContextTimeout(ctx, 100*time.Millisecond,
-		20*time.Second, true, func(ctx context.Context) (bool, error) {
-			defer GinkgoRecover()
+	Eventually(func(g Gomega) {
+		list, err := c.k8s.DiscoveryV1().EndpointSlices(t.namespace).List(ctx, metav1.ListOptions{})
+		g.Expect(err).ToNot(HaveOccurred(), "Error retrieving EndpointSlices")
 
-			list, err := c.k8s.DiscoveryV1().EndpointSlices(t.namespace).List(ctx, metav1.ListOptions{})
-			Expect(err).ToNot(HaveOccurred(), "Error retrieving EndpointSlices")
+		endpointSlice = nil
 
-			for i := range list.Items {
-				eps := &list.Items[i]
+		for i := range list.Items {
+			eps := &list.Items[i]
 
-				if hasLabel(eps, v1alpha1.LabelServiceName) || hasLabel(eps, v1alpha1.LabelSourceCluster) {
-					endpointSlice = eps
-					return true, nil
+			if hasLabel(eps, v1alpha1.LabelServiceName) && hasLabel(eps, v1alpha1.LabelSourceCluster) && eps.AddressType == addressType {
+				endpointSlice = eps
+
+				if verify != nil {
+					verify(g, endpointSlice)
 				}
 			}
+		}
 
-			return false, nil
-		})
+		g.Expect(endpointSlice).ToNot(BeNil(), desc...)
+
+		// The final run succeeded so cancel any prior non-conformance reported.
+		cancelNonConformanceReport()
+	}).Within(20 * time.Second).ProbeEvery(100 * time.Millisecond).Should(Succeed())
 
 	return endpointSlice
 }

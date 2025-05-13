@@ -58,7 +58,7 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, ClusterIPLabel), func() {
 			By(fmt.Sprintf("Found ServiceImport on cluster %q with clusterset IP %q", client.name, clusterSetIP))
 			By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), client.name))
 
-			t.awaitCmdOutputContains(&client, command, clusterSetIP, 1, reportNonConformant(""))
+			t.awaitCmdOutputMatches(&client, command, clusterSetIP, 1, reportNonConformant(""))
 		}
 	})
 
@@ -104,7 +104,7 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, ClusterIPLabel), func() {
 
 		By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), clients[0].name))
 
-		t.awaitCmdOutputContains(&clients[0], command, resolvedIP, 1, reportNonConformant(""))
+		t.awaitCmdOutputMatches(&clients[0], command, resolvedIP, 1, reportNonConformant(""))
 	})
 })
 
@@ -133,6 +133,10 @@ var srvRecordRegEx = regexp.MustCompile(`.*=\s*\d*\s*\d*\s*(\d*)\s*([a-zA-Z0-9-.
 type srvRecord struct {
 	port       int32
 	domainName string
+}
+
+func (s srvRecord) String() string {
+	return fmt.Sprintf("port:%d, domainName:%q", s.port, s.domainName)
 }
 
 func parseSRVRecords(str string) []srvRecord {
