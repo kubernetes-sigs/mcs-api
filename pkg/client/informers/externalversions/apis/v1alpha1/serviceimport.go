@@ -19,24 +19,24 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	apisv1alpha1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	pkgapisv1alpha1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 	versioned "sigs.k8s.io/mcs-api/pkg/client/clientset/versioned"
 	internalinterfaces "sigs.k8s.io/mcs-api/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "sigs.k8s.io/mcs-api/pkg/client/listers/apis/v1alpha1"
+	apisv1alpha1 "sigs.k8s.io/mcs-api/pkg/client/listers/apis/v1alpha1"
 )
 
 // ServiceImportInformer provides access to a shared informer and lister for
 // ServiceImports.
 type ServiceImportInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.ServiceImportLister
+	Lister() apisv1alpha1.ServiceImportLister
 }
 
 type serviceImportInformer struct {
@@ -71,7 +71,7 @@ func NewFilteredServiceImportInformer(client versioned.Interface, namespace stri
 				return client.MulticlusterV1alpha1().ServiceImports(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&apisv1alpha1.ServiceImport{},
+		&pkgapisv1alpha1.ServiceImport{},
 		resyncPeriod,
 		indexers,
 	)
@@ -82,9 +82,9 @@ func (f *serviceImportInformer) defaultInformer(client versioned.Interface, resy
 }
 
 func (f *serviceImportInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apisv1alpha1.ServiceImport{}, f.defaultInformer)
+	return f.factory.InformerFor(&pkgapisv1alpha1.ServiceImport{}, f.defaultInformer)
 }
 
-func (f *serviceImportInformer) Lister() v1alpha1.ServiceImportLister {
-	return v1alpha1.NewServiceImportLister(f.Informer().GetIndexer())
+func (f *serviceImportInformer) Lister() apisv1alpha1.ServiceImportLister {
+	return apisv1alpha1.NewServiceImportLister(f.Informer().GetIndexer())
 }

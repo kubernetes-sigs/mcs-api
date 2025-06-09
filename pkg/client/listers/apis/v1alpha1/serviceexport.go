@@ -19,10 +19,10 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
-	v1alpha1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
+	apisv1alpha1 "sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
 
 // ServiceExportLister helps list ServiceExports.
@@ -30,7 +30,7 @@ import (
 type ServiceExportLister interface {
 	// List lists all ServiceExports in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.ServiceExport, err error)
+	List(selector labels.Selector) (ret []*apisv1alpha1.ServiceExport, err error)
 	// ServiceExports returns an object that can list and get ServiceExports.
 	ServiceExports(namespace string) ServiceExportNamespaceLister
 	ServiceExportListerExpansion
@@ -38,25 +38,17 @@ type ServiceExportLister interface {
 
 // serviceExportLister implements the ServiceExportLister interface.
 type serviceExportLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*apisv1alpha1.ServiceExport]
 }
 
 // NewServiceExportLister returns a new ServiceExportLister.
 func NewServiceExportLister(indexer cache.Indexer) ServiceExportLister {
-	return &serviceExportLister{indexer: indexer}
-}
-
-// List lists all ServiceExports in the indexer.
-func (s *serviceExportLister) List(selector labels.Selector) (ret []*v1alpha1.ServiceExport, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ServiceExport))
-	})
-	return ret, err
+	return &serviceExportLister{listers.New[*apisv1alpha1.ServiceExport](indexer, apisv1alpha1.Resource("serviceexport"))}
 }
 
 // ServiceExports returns an object that can list and get ServiceExports.
 func (s *serviceExportLister) ServiceExports(namespace string) ServiceExportNamespaceLister {
-	return serviceExportNamespaceLister{indexer: s.indexer, namespace: namespace}
+	return serviceExportNamespaceLister{listers.NewNamespaced[*apisv1alpha1.ServiceExport](s.ResourceIndexer, namespace)}
 }
 
 // ServiceExportNamespaceLister helps list and get ServiceExports.
@@ -64,36 +56,15 @@ func (s *serviceExportLister) ServiceExports(namespace string) ServiceExportName
 type ServiceExportNamespaceLister interface {
 	// List lists all ServiceExports in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.ServiceExport, err error)
+	List(selector labels.Selector) (ret []*apisv1alpha1.ServiceExport, err error)
 	// Get retrieves the ServiceExport from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.ServiceExport, error)
+	Get(name string) (*apisv1alpha1.ServiceExport, error)
 	ServiceExportNamespaceListerExpansion
 }
 
 // serviceExportNamespaceLister implements the ServiceExportNamespaceLister
 // interface.
 type serviceExportNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all ServiceExports in the indexer for a given namespace.
-func (s serviceExportNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.ServiceExport, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ServiceExport))
-	})
-	return ret, err
-}
-
-// Get retrieves the ServiceExport from the indexer for a given namespace and name.
-func (s serviceExportNamespaceLister) Get(name string) (*v1alpha1.ServiceExport, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha1.Resource("serviceexport"), name)
-	}
-	return obj.(*v1alpha1.ServiceExport), nil
+	listers.ResourceIndexer[*apisv1alpha1.ServiceExport]
 }
