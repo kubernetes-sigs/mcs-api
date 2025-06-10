@@ -40,6 +40,7 @@ const (
 	ConnectivityLabel        = "Connectivity"
 	ClusterIPLabel           = "ClusterIP"
 	HeadlessLabel            = "Headless"
+	ExternalNameLabel        = "ExternalName"
 	EndpointSliceLabel       = "EndpointSlice"
 	ExportedLabelsLabel      = "ExportedLabels"
 	SpecRefReportEntry       = "spec-ref"
