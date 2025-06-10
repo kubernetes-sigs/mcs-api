@@ -72,6 +72,9 @@ type ServiceImportSpec struct {
 	// sessionAffinityConfig contains session affinity configuration.
 	// +optional
 	SessionAffinityConfig *v1.SessionAffinityConfig `json:"sessionAffinityConfig,omitempty"`
+	// IPFamilies identifies all the IPFamilies assigned for this ServiceImport.
+	// +optional
+	IPFamilies []v1.IPFamily `json:"ipFamilies,omitempty"`
 }
 
 // ServicePort represents the port on which the service is exposed
