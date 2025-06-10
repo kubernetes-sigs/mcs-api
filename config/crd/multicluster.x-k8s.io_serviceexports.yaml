@@ -24,6 +24,7 @@ spec:
     kind: ServiceExport
     shortNames:
       - svcex
+      - svcexport
   versions:
     - name: v1alpha1
       served: true

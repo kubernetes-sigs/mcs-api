@@ -24,6 +24,7 @@ spec:
     kind: ServiceImport
     shortNames:
       - svcim
+      - svcimport
   versions:
     - name: v1alpha1
       served: true
