@@ -267,14 +267,22 @@ func (t *testDriver) ensureServiceImport(c *clusterClients, name, nonConformance
 	}, 5*time.Second, 100*time.Millisecond).ShouldNot(HaveOccurred(), reportNonConformant(nonConformanceMsg))
 }
 
-func (t *testDriver) awaitServiceExportCondition(c *clusterClients, condType string) {
+func (t *testDriver) ensureNoServiceImport(c *clusterClients, name, nonConformanceMsg string) {
+	Consistently(func() bool {
+		_, err := c.mcs.MulticlusterV1alpha1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
+		return apierrors.IsNotFound(err)
+	}, 5*time.Second, 100*time.Millisecond).Should(BeTrue(), reportNonConformant(nonConformanceMsg))
+}
+
+func (t *testDriver) awaitServiceExportCondition(c *clusterClients, condType string, wantStatus metav1.ConditionStatus) {
 	Eventually(func() bool {
 		se, err := c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Get(ctx, helloServiceName, metav1.GetOptions{})
 		Expect(err).ToNot(HaveOccurred())
 
-		return meta.FindStatusCondition(se.Status.Conditions, condType) != nil
+		cond := meta.FindStatusCondition(se.Status.Conditions, condType)
+		return cond != nil && cond.Status == wantStatus
 	}, 20*time.Second, 100*time.Millisecond).Should(BeTrue(),
-		reportNonConformant(fmt.Sprintf("The %s condition was not set", condType)))
+		reportNonConformant(fmt.Sprintf("The %s condition was not set to %s", condType, wantStatus)))
 }
 
 func (t *testDriver) startRequestPod(ctx context.Context, client clusterClients) {
