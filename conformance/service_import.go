@@ -47,14 +47,15 @@ func testGeneralServiceImport() {
 		t.createServiceExport(&clients[0], helloServiceExport)
 	})
 
-	assertHasKeyValues := func(actual, expected map[string]string) {
+	assertHasKeyValues := func(g Gomega, actual, expected map[string]string) {
 		for k, v := range expected {
-			Expect(actual).To(HaveKeyWithValue(k, v), reportNonConformant(""))
+			g.Expect(actual).To(HaveKeyWithValue(k, v), reportNonConformant(""))
 		}
 	}
-	assertNotHasKeyValues := func(actual, expected map[string]string) {
+
+	assertNotHasKeyValues := func(g Gomega, actual, expected map[string]string) {
 		for k, v := range expected {
-			Expect(actual).ToNot(HaveKeyWithValue(k, v), reportNonConformant(""))
+			g.Expect(actual).ToNot(HaveKeyWithValue(k, v), reportNonConformant(""))
 		}
 	}
 
@@ -66,10 +67,7 @@ func testGeneralServiceImport() {
 
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/blob/master/keps/sig-multicluster/1645-multi-cluster-services-api/README.md#importing-services")
 
-		serviceImport := t.awaitServiceImport(&clients[0], t.helloService.Name, func(serviceImport *v1alpha1.ServiceImport) bool {
-			return true
-		})
-		Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
+		t.awaitServiceImport(&clients[0], t.helloService.Name, false, nil)
 
 		By(fmt.Sprintf("Exporting the service on the second cluster %q", clients[1].name))
 
@@ -109,16 +107,14 @@ func testGeneralServiceImport() {
 			Label(OptionalLabel), Label(ExportedLabelsLabel), func() {
 				AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#labels-and-annotations")
 
-				serviceImport := t.awaitServiceImport(&clients[0], helloServiceName, func(serviceImport *v1alpha1.ServiceImport) bool {
-					return len(serviceImport.Labels) > 0
-				})
-				Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
+				t.awaitServiceImport(&clients[0], helloServiceName, false,
+					func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
+						assertHasKeyValues(g, serviceImport.Annotations, helloServiceExport.Annotations)
+						assertNotHasKeyValues(g, serviceImport.Annotations, t.helloService.Annotations)
 
-				assertHasKeyValues(serviceImport.Annotations, helloServiceExport.Annotations)
-				assertNotHasKeyValues(serviceImport.Annotations, t.helloService.Annotations)
-
-				assertHasKeyValues(serviceImport.Labels, helloServiceExport.Labels)
-				assertNotHasKeyValues(serviceImport.Labels, t.helloService.Labels)
+						assertHasKeyValues(g, serviceImport.Labels, helloServiceExport.Labels)
+						assertNotHasKeyValues(g, serviceImport.Labels, t.helloService.Labels)
+					})
 			})
 	})
 
@@ -141,16 +137,14 @@ func testGeneralServiceImport() {
 					t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConflict, metav1.ConditionTrue)
 					t.awaitServiceExportCondition(&clients[1], v1alpha1.ServiceExportConflict, metav1.ConditionTrue)
 
-					serviceImport := t.awaitServiceImport(&clients[0], t.helloService.Name, func(serviceImport *v1alpha1.ServiceImport) bool {
-						return len(serviceImport.Labels) > 0
-					})
-					Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
+					t.awaitServiceImport(&clients[0], t.helloService.Name, false,
+						func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
+							assertHasKeyValues(g, serviceImport.Annotations, helloServiceExport.Annotations)
+							assertNotHasKeyValues(g, serviceImport.Annotations, tt.helloServiceExport2.Annotations)
 
-					assertHasKeyValues(serviceImport.Annotations, helloServiceExport.Annotations)
-					assertNotHasKeyValues(serviceImport.Annotations, tt.helloServiceExport2.Annotations)
-
-					assertHasKeyValues(serviceImport.Labels, helloServiceExport.Labels)
-					assertNotHasKeyValues(serviceImport.Labels, tt.helloServiceExport2.Labels)
+							assertHasKeyValues(g, serviceImport.Labels, helloServiceExport.Labels)
+							assertNotHasKeyValues(g, serviceImport.Labels, tt.helloServiceExport2.Labels)
+						})
 				})
 		})
 	})
@@ -173,9 +167,7 @@ func testClusterIPServiceImport() {
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#importing-services")
 
 		for i := range clients {
-			serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, nil)
-			Expect(serviceImport).NotTo(BeNil(), reportNonConformant(fmt.Sprintf("ServiceImport was not found on cluster %q",
-				clients[i].name)))
+			serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, true, nil)
 
 			Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.ClusterSetIP), reportNonConformant(
 				fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
@@ -195,24 +187,22 @@ func testClusterIPServiceImport() {
 		Label(RequiredLabel), func() {
 			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#session-affinity")
 
-			serviceImport := t.awaitServiceImport(&clients[0], helloServiceName, nil)
-			Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
+			t.awaitServiceImport(&clients[0], helloServiceName, false, func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
+				g.Expect(serviceImport.Spec.SessionAffinity).To(Equal(t.helloService.Spec.SessionAffinity), reportNonConformant(""))
 
-			Expect(serviceImport.Spec.SessionAffinity).To(Equal(t.helloService.Spec.SessionAffinity), reportNonConformant(""))
-
-			Expect(serviceImport.Spec.SessionAffinityConfig).To(Equal(t.helloService.Spec.SessionAffinityConfig), reportNonConformant(
-				"The SessionAffinityConfig of the ServiceImport does not match the exported Service's SessionAffinityConfig"))
+				g.Expect(serviceImport.Spec.SessionAffinityConfig).To(Equal(t.helloService.Spec.SessionAffinityConfig), reportNonConformant(
+					"The SessionAffinityConfig of the ServiceImport does not match the exported Service's SessionAffinityConfig"))
+			})
 		})
 
 	Specify("An IP should be allocated for a ClusterSetIP ServiceImport", Label(RequiredLabel), func() {
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#clustersetip")
 
-		serviceImport := t.awaitServiceImport(&clients[0], t.helloService.Name, func(serviceImport *v1alpha1.ServiceImport) bool {
-			return len(serviceImport.Spec.IPs) > 0
-		})
-		Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
+		serviceImport := t.awaitServiceImport(&clients[0], t.helloService.Name, false,
+			func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
+				g.Expect(serviceImport.Spec.IPs).ToNot(BeEmpty(), reportNonConformant(""))
+			})
 
-		Expect(serviceImport.Spec.IPs).ToNot(BeEmpty(), reportNonConformant(""))
 		Expect(net.ParseIP(serviceImport.Spec.IPs[0])).ToNot(BeNil(),
 			reportNonConformant(fmt.Sprintf("The value %q is not a valid IP", serviceImport.Spec.IPs[0])))
 	})
@@ -220,12 +210,9 @@ func testClusterIPServiceImport() {
 	Specify("The ports for a ClusterSetIP ServiceImport should match those of the exported service", Label(RequiredLabel), func() {
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-port")
 
-		serviceImport := t.awaitServiceImport(&clients[0], helloServiceName, func(serviceImport *v1alpha1.ServiceImport) bool {
-			return len(serviceImport.Spec.Ports) > 0
+		t.awaitServiceImport(&clients[0], helloServiceName, false, func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
+			g.Expect(sortMCSPorts(serviceImport.Spec.Ports)).To(Equal(toMCSPorts(t.helloService.Spec.Ports)), reportNonConformant(""))
 		})
-		Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
-
-		Expect(sortMCSPorts(serviceImport.Spec.Ports)).To(Equal(toMCSPorts(t.helloService.Spec.Ports)), reportNonConformant(""))
 	})
 
 	Context("A ClusterIP service exported on two clusters", func() {
@@ -246,13 +233,11 @@ func testClusterIPServiceImport() {
 			Specify("should expose the union of the constituent service ports", Label(RequiredLabel), func() {
 				AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-port")
 
-				serviceImport := t.awaitServiceImport(&clients[0], t.helloService.Name, func(serviceImport *v1alpha1.ServiceImport) bool {
-					return len(serviceImport.Spec.Ports) == 3
-				})
-				Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
-
-				Expect(sortMCSPorts(serviceImport.Spec.Ports)).To(Equal(toMCSPorts(
-					append(t.helloService.Spec.Ports, tt.helloService2.Spec.Ports[1]))), reportNonConformant(""))
+				t.awaitServiceImport(&clients[0], t.helloService.Name, false,
+					func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
+						g.Expect(sortMCSPorts(serviceImport.Spec.Ports)).To(Equal(toMCSPorts(
+							append(t.helloService.Spec.Ports, tt.helloService2.Spec.Ports[1]))), reportNonConformant(""))
+					})
 			})
 		})
 
@@ -268,13 +253,11 @@ func testClusterIPServiceImport() {
 				t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConflict, metav1.ConditionTrue)
 				t.awaitServiceExportCondition(&clients[1], v1alpha1.ServiceExportConflict, metav1.ConditionTrue)
 
-				serviceImport := t.awaitServiceImport(&clients[0], t.helloService.Name, func(serviceImport *v1alpha1.ServiceImport) bool {
-					return len(serviceImport.Spec.Ports) == len(t.helloService.Spec.Ports)
-				})
-				Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
-
-				Expect(sortMCSPorts(serviceImport.Spec.Ports)).To(Equal(toMCSPorts(t.helloService.Spec.Ports)),
-					reportNonConformant("The service ports were not resolved correctly"))
+				t.awaitServiceImport(&clients[0], t.helloService.Name, false,
+					func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
+						g.Expect(sortMCSPorts(serviceImport.Spec.Ports)).To(Equal(toMCSPorts(t.helloService.Spec.Ports)),
+							reportNonConformant("The service ports were not resolved correctly"))
+					})
 			})
 		})
 	})
@@ -296,9 +279,7 @@ func testHeadlessServiceImport() {
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-types")
 
 		for i := range clients {
-			serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, nil)
-			Expect(serviceImport).NotTo(BeNil(), reportNonConformant(fmt.Sprintf("ServiceImport was not found on cluster %q",
-				clients[i].name)))
+			serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, true, nil)
 
 			Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.Headless), reportNonConformant(
 				fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
@@ -317,8 +298,7 @@ func testHeadlessServiceImport() {
 	Specify("No clusterset IP should be allocated for a Headless ServiceImport", Label(RequiredLabel), func() {
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#clustersetip")
 
-		serviceImport := t.awaitServiceImport(&clients[0], t.helloService.Name, nil)
-		Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found")
+		t.awaitServiceImport(&clients[0], t.helloService.Name, false, nil)
 
 		Consistently(func() []string {
 			return t.getServiceImport(&clients[0], t.helloService.Name).Spec.IPs
