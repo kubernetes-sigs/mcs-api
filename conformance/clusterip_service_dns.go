@@ -44,11 +44,10 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, ClusterIPLabel), func() {
 
 		serviceImports := []*v1alpha1.ServiceImport{}
 		for _, client := range clients {
-			serviceImport := t.awaitServiceImport(&client, t.helloService.Name, func(serviceImport *v1alpha1.ServiceImport) bool {
-				return len(serviceImport.Spec.IPs) > 0
-			})
-			Expect(serviceImport).NotTo(BeNil(), "ServiceImport was not found on cluster %q", client.name)
-			Expect(serviceImport.Spec.IPs).ToNot(BeEmpty(), "ServiceImport on cluster %q does not contain an IP", client.name)
+			serviceImport := t.awaitServiceImport(&client, t.helloService.Name, false,
+				func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
+					g.Expect(serviceImport.Spec.IPs).ToNot(BeEmpty(), "ServiceImport on cluster %q does not contain an IP", client.name)
+				})
 			serviceImports = append(serviceImports, serviceImport)
 		}
 

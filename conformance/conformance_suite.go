@@ -37,7 +37,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -227,22 +226,31 @@ func (t *testDriver) getServiceImport(c *clusterClients, name string) *v1alpha1.
 	return si
 }
 
-func (t *testDriver) awaitServiceImport(c *clusterClients, name string, verify func(*v1alpha1.ServiceImport) bool) *v1alpha1.ServiceImport {
+func (t *testDriver) awaitServiceImport(c *clusterClients, name string, reportNonConformanceOnMissing bool,
+	verify func(Gomega, *v1alpha1.ServiceImport)) *v1alpha1.ServiceImport {
 	var serviceImport *v1alpha1.ServiceImport
 
-	_ = wait.PollUntilContextTimeout(ctx, 100*time.Millisecond,
-		20*time.Second, true, func(ctx context.Context) (bool, error) {
-			defer GinkgoRecover()
+	Eventually(func(g Gomega) {
+		si := t.getServiceImport(c, name)
 
-			si := t.getServiceImport(c, name)
-			if si == nil {
-				return false, nil
-			}
+		missingMsg := fmt.Sprintf("ServiceImport was not found on cluster %q", c.name)
 
-			serviceImport = si
+		var missing any = missingMsg
+		if reportNonConformanceOnMissing {
+			missing = reportNonConformant(missingMsg)
+		}
 
-			return verify == nil || verify(serviceImport), nil
-		})
+		g.Expect(si).NotTo(BeNil(), missing)
+
+		serviceImport = si
+
+		if verify != nil {
+			verify(g, serviceImport)
+		}
+
+		// The final run succeeded so cancel any prior non-conformance reported.
+		cancelNonConformanceReport()
+	}).Within(20 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 
 	return serviceImport
 }
