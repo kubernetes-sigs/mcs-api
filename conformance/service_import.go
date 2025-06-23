@@ -33,6 +33,7 @@ var (
 	_ = Describe("", Label(ClusterIPLabel), testClusterIPServiceImport)
 	_ = Describe("", Label(HeadlessLabel), testHeadlessServiceImport)
 	_ = Describe("", Label(ExternalNameLabel), testExternalNameService)
+	_ = Describe("", testServiceTypeConflict)
 )
 
 func testGeneralServiceImport() {
@@ -324,5 +325,32 @@ func testExternalNameService() {
 		t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportValid, metav1.ConditionFalse)
 		t.ensureNoServiceImport(&clients[0], helloServiceName,
 			"the ServiceImport should not exist for an ExternalName service")
+	})
+}
+
+func testServiceTypeConflict() {
+	t := newTwoClusterTestDriver(newTestDriver())
+
+	BeforeEach(func() {
+		t.helloService2.Spec.ClusterIP = corev1.ClusterIPNone
+	})
+
+	JustBeforeEach(func() {
+		t.createServiceExport(&clients[0], newHelloServiceExport())
+	})
+
+	Specify("A service exported on two clusters with conflicting headlessness should apply the conflict resolution policy and "+
+		"report a Conflict condition on the ServiceExport", Label(RequiredLabel), func() {
+		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#headlessness")
+
+		t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConflict, metav1.ConditionTrue)
+		t.awaitServiceExportCondition(&clients[1], v1alpha1.ServiceExportConflict, metav1.ConditionTrue)
+
+		for i := range clients {
+			serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, true, nil)
+
+			Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.ClusterSetIP), reportNonConformant(
+				fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
+		}
 	})
 }
