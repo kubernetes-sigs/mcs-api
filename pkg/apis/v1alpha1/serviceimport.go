@@ -120,6 +120,12 @@ type ServiceImportStatus struct {
 	// +listType=map
 	// +listMapKey=cluster
 	Clusters []ClusterStatus `json:"clusters,omitempty"`
+	// +optional
+	// +patchStrategy=merge
+	// +patchMergeKey=type
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 // ClusterStatus contains service configuration mapped to a specific source cluster
@@ -141,3 +147,39 @@ type ServiceImportList struct {
 	// +listType=set
 	Items []ServiceImport `json:"items"`
 }
+
+const (
+	// ServiceImportConditionReady is true when the Service Import is ready.
+	//
+	//
+	// Possible reasons for this condition to be true are:
+	//
+	// * "Ready"
+	//
+	// Possible reasons for this condition to be False are:
+	//
+	// * "Pending"
+	// * "IPFamilyNotSupported"
+	//
+	// Possible reasons for this condition to be Unknown are:
+	//
+	// * "Pending"
+	//
+	// Controllers may raise this condition with other reasons,
+	// but should prefer to use the reasons listed above to improve
+	// interoperability.
+	ServiceImportConditionReady = "Ready"
+
+	// ServiceImportReasonReady is used with the "Ready" condition when the
+	// condition is True.
+	ServiceImportReasonReady = "Ready"
+
+	// ServiceImportReasonPending is used with the "Ready" condition when
+	// the ServiceImport is in the process of being created or updated.
+	ServiceImportReasonPending = "Pending"
+
+	// ServiceImportReasonIPFamilyNotSupported is used with the "Ready"
+	// condition when the service can not be imported due to IP families
+	// mismatch.
+	ServiceImportReasonIPFamilyNotSupported = "IPFamilyNotSupported"
+)
