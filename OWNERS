@@ -1,7 +1,20 @@
 # See the OWNERS docs at https://go.k8s.io/owners
 
-approvers:
-  - JeremyOT
-  - pmorie
+reviewers:
+  - jeremyot
   - lauralorenz
   - skitt
+  - corentone
+  - jnpacker
+  - MrFreezeex
+  - munnerz
+  - RainbowMango
+  - ryanzhang-oss
+
+approvers:
+  - JeremyOT
+  - lauralorenz
+  - skitt
+
+emeritus_approvers:
+  - pmorie
