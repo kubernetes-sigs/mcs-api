@@ -67,7 +67,7 @@ const (
 	// This will be false if the service is found to be unexportable
 	// (ExternalName, not found).
 	//
-	// Deprecated: use ServiceExportConditionAccepted instead
+	// Deprecated: use ServiceExportConditionValid instead
 	ServiceExportValid = "Valid"
 	// ServiceExportConflict means that there is a conflict between two
 	// exports for the same Service. When "True", the condition message
@@ -76,7 +76,7 @@ const (
 	// Users should not expect detailed per-cluster information in the
 	// conflict message.
 	//
-	// Deprecated: use ServiceExportConditionConflicted instead
+	// Deprecated: use ServiceExportConditionConflict instead
 	ServiceExportConflict = "Conflict"
 )
 
@@ -114,14 +114,14 @@ func NewServiceExportCondition(t ServiceExportConditionType, status metav1.Condi
 }
 
 const (
-	// ServiceExportConditionAccepted is true when the Service Export is accepted.
+	// ServiceExportConditionValid is true when the Service Export is valid.
 	// This does not indicate whether or not the configuration has been exported
 	// to a control plane / data plane.
 	//
 	//
 	// Possible reasons for this condition to be true are:
 	//
-	// * "Accepted"
+	// * "Valid"
 	//
 	// Possible reasons for this condition to be False are:
 	//
@@ -131,33 +131,31 @@ const (
 	// Controllers may raise this condition with other reasons,
 	// but should prefer to use the reasons listed above to improve
 	// interoperability.
-	ServiceExportConditionAccepted ServiceExportConditionType = "Accepted"
+	ServiceExportConditionValid ServiceExportConditionType = "Valid"
 
-	// ServiceExportReasonAccepted is used with the "Accepted" condition when the
+	// ServiceExportReasonValid is used with the "Valid" condition when the
 	// condition is True.
-	ServiceExportReasonAccepted ServiceExportConditionReason = "Accepted"
+	ServiceExportReasonValid ServiceExportConditionReason = "Valid"
 
-	// ServiceExportReasonNoService is used with the "Accepted" condition when
+	// ServiceExportReasonNoService is used with the "Valid" condition when
 	// the associated Service does not exist.
 	ServiceExportReasonNoService ServiceExportConditionReason = "NoService"
 
-	// ServiceExportReasonInvalidServiceType is used with the "Accepted"
+	// ServiceExportReasonInvalidServiceType is used with the "Valid"
 	// condition when the associated Service has an invalid type
 	// (per the KEP at least the ExternalName type).
 	ServiceExportReasonInvalidServiceType ServiceExportConditionReason = "InvalidServiceType"
 )
 
 const (
-	// ServiceExportConditionExported is true when the service is exported to some
-	// control plane or data plane. This condition might not makes sense
-	// for every implementation, particularly if they function in a "pull mode"
-	// rather than actually exporting the service, and in that case implementations
-	// do not have do use this Condition type at all.
+	// ServiceExportConditionReady is true when the service is exported
+	// to some control plane or data plane or ready to be pulled.
 	//
 	//
 	// Possible reasons for this condition to be true are:
 	//
 	// * "Exported"
+	// * "Ready"
 	//
 	// Possible reasons for this condition to be False are:
 	//
@@ -171,24 +169,32 @@ const (
 	// Controllers may raise this condition with other reasons,
 	// but should prefer to use the reasons listed above to improve
 	// interoperability.
-	ServiceExportConditionExported ServiceExportConditionType = "Exported"
+	ServiceExportConditionReady ServiceExportConditionType = "Ready"
 
-	// ServiceExportReasonExported is used with the "Exported" condition
-	// when the condition is True.
+	// ServiceExportReasonExported is used with the "Ready" condition
+	// when the condition is True and the service has been exported.
+	// This would be used when an implementation exports a service
+	// to a control plane or data plane.
 	ServiceExportReasonExported ServiceExportConditionReason = "Exported"
 
-	// ServiceExportReasonPending is used with the "Exported" condition
+	// ServiceExportReasonReady is used with the "Ready" condition
+	// when the condition is True and the service has been exported.
+	// This would typically be used in an implementation that uses a
+	// pull model.
+	ServiceExportReasonReady ServiceExportConditionReason = "Ready"
+
+	// ServiceExportReasonPending is used with the "Ready" condition
 	// when the service is in the process of being exported.
 	ServiceExportReasonPending ServiceExportConditionReason = "Pending"
 
-	// ServiceExportReasonFailed is used with the "Exported" condition
+	// ServiceExportReasonFailed is used with the "Ready" condition
 	// when the service failed to be exported with the message providing
 	// the specific reason.
 	ServiceExportReasonFailed ServiceExportConditionReason = "Failed"
 )
 
 const (
-	// ServiceExportConditionConflicted indicates that some property of an
+	// ServiceExportConditionConflict indicates that some property of an
 	// exported service has conflicting values across the constituent
 	// ServiceExports. This condition must be at least raised on the
 	// conflicting ServiceExport and is recommended to be raised on all on
@@ -214,40 +220,40 @@ const (
 	// Controllers may raise this condition with other reasons,
 	// but should prefer to use the reasons listed above to improve
 	// interoperability.
-	ServiceExportConditionConflicted ServiceExportConditionType = "Conflicted"
+	ServiceExportConditionConflict ServiceExportConditionType = "Conflict"
 
-	// ServiceExportReasonPortConflict is used with the "Conflicted" condition
+	// ServiceExportReasonPortConflict is used with the "Conflict" condition
 	// when the exported service has a conflict related to port configuration.
 	// This includes when ports on resulting imported services would have
 	// duplicated names (including unnamed/empty name) or duplicated
 	// port/protocol pairs.
 	ServiceExportReasonPortConflict ServiceExportConditionReason = "PortConflict"
 
-	// ServiceExportReasonTypeConflict is used with the "Conflicted" condition
+	// ServiceExportReasonTypeConflict is used with the "Conflict" condition
 	// when the exported service has a conflict related to the service type
 	// (eg headless vs non-headless).
 	ServiceExportReasonTypeConflict ServiceExportConditionReason = "TypeConflict"
 
-	// ServiceExportReasonSessionAffinityConflict is used with the "Conflicted"
+	// ServiceExportReasonSessionAffinityConflict is used with the "Conflict"
 	// condition when the exported service has a conflict related to session affinity.
 	ServiceExportReasonSessionAffinityConflict ServiceExportConditionReason = "SessionAffinityConflict"
 
 	// ServiceExportReasonSessionAffinityConfigConflict is used with the
-	// "Conflicted" condition when the exported service has a conflict related
+	// "Conflict" condition when the exported service has a conflict related
 	// to session affinity config.
 	ServiceExportReasonSessionAffinityConfigConflict ServiceExportConditionReason = "SessionAffinityConfigConflict"
 
-	// ServiceExportReasonLabelsConflict is used with the "Conflicted"
+	// ServiceExportReasonLabelsConflict is used with the "Conflict"
 	// condition when the ServiceExport has a conflict related to exported
 	// labels.
 	ServiceExportReasonLabelsConflict ServiceExportConditionReason = "LabelsConflict"
 
-	// ServiceExportReasonAnnotationsConflict is used with the "Conflicted"
+	// ServiceExportReasonAnnotationsConflict is used with the "Conflict"
 	// condition when the ServiceExport has a conflict related to exported
 	// annotations.
 	ServiceExportReasonAnnotationsConflict ServiceExportConditionReason = "AnnotationsConflict"
 
-	// ServiceExportReasonNoConflicts is used with the "Conflicted" condition
+	// ServiceExportReasonNoConflicts is used with the "Conflict" condition
 	// when the condition is False.
 	ServiceExportReasonNoConflicts ServiceExportConditionReason = "NoConflicts"
 )
