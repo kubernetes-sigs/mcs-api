@@ -349,9 +349,9 @@ func newTwoClusterTestDriver(t *testDriver) *twoClusterTestDriver {
 	})
 
 	JustBeforeEach(func() {
-		// Sleep a little before deploying on the second cluster to ensure the first cluster's ServiceExport timestamp
-		// is older so conflict checking is deterministic.
-		time.Sleep(100 * time.Millisecond)
+		// Delay a little before deploying on the second cluster to ensure the first cluster's ServiceExport timestamp
+		// is older so conflict checking is deterministic. Make the delay at least 1 sec as creation timestamps have seconds granularity.
+		time.Sleep(1100 * time.Millisecond)
 
 		t.deployHelloService(&clients[1], tt.helloService2)
 		t.createServiceExport(&clients[1], tt.helloServiceExport2)
