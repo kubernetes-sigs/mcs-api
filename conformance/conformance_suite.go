@@ -288,12 +288,13 @@ func (t *testDriver) ensureNoServiceImport(c *clusterClients, name, nonConforman
 	}, 5*time.Second, 100*time.Millisecond).Should(BeTrue(), reportNonConformant(nonConformanceMsg))
 }
 
-func (t *testDriver) awaitServiceExportCondition(c *clusterClients, condType string, wantStatus metav1.ConditionStatus) {
+func (t *testDriver) awaitServiceExportCondition(c *clusterClients, condType v1alpha1.ServiceExportConditionType,
+	wantStatus metav1.ConditionStatus) {
 	Eventually(func() bool {
 		se, err := c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Get(ctx, helloServiceName, metav1.GetOptions{})
 		Expect(err).ToNot(HaveOccurred())
 
-		cond := meta.FindStatusCondition(se.Status.Conditions, condType)
+		cond := meta.FindStatusCondition(se.Status.Conditions, string(condType))
 		return cond != nil && cond.Status == wantStatus
 	}, 20*time.Second, 100*time.Millisecond).Should(BeTrue(),
 		reportNonConformant(fmt.Sprintf("The %s condition was not set to %s", condType, wantStatus)))
