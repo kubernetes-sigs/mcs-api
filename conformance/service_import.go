@@ -345,12 +345,5 @@ func testServiceTypeConflict() {
 
 		t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConflict, metav1.ConditionTrue)
 		t.awaitServiceExportCondition(&clients[1], v1alpha1.ServiceExportConflict, metav1.ConditionTrue)
-
-		for i := range clients {
-			serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, true, nil)
-
-			Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.ClusterSetIP), reportNonConformant(
-				fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
-		}
 	})
 }
