@@ -26,3 +26,8 @@ var (
 	//go:embed multicluster.x-k8s.io_serviceimports.yaml
 	ServiceImportCRD []byte
 )
+
+const (
+	// CustomResourceDefinitionSchemaVersionKey is key to label which holds the CRD schema version
+	CustomResourceDefinitionSchemaVersionKey = "multicluster.x-k8s.io/crd-schema-version"
+)
