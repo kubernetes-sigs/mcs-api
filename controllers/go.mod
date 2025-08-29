@@ -11,7 +11,7 @@ require (
 	k8s.io/client-go v0.32.5
 	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/kind v0.23.0
-	sigs.k8s.io/mcs-api v0.0.0-00010101000000-000000000000
+	sigs.k8s.io/mcs-api v0.3.0
 )
 
 replace sigs.k8s.io/mcs-api => ..

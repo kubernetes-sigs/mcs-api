@@ -8,7 +8,7 @@ require (
 	k8s.io/api v0.32.5
 	k8s.io/apimachinery v0.32.5
 	k8s.io/client-go v0.32.5
-	sigs.k8s.io/mcs-api v0.1.0
+	sigs.k8s.io/mcs-api v0.3.0
 )
 
 replace sigs.k8s.io/mcs-api => ..
