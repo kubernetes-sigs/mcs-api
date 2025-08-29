@@ -69,8 +69,6 @@ var _ = Describe("", Label(OptionalLabel, EndpointSliceLabel), func() {
 			}
 		}
 
-		By("Unexporting the service")
-
 		t.deleteServiceExport(&clients[0])
 
 		for i, client := range clients {

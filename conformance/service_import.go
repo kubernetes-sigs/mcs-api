@@ -82,15 +82,11 @@ func testGeneralServiceImport() {
 		t.ensureServiceImport(&clients[0], t.helloService.Name, fmt.Sprintf(
 			"the ServiceImport no longer exists after exporting on cluster %q", clients[1].name))
 
-		By(fmt.Sprintf("Unexporting the service on the first cluster %q", clients[0].name))
-
 		t.deleteServiceExport(&clients[0])
 
 		t.ensureServiceImport(&clients[0], t.helloService.Name, fmt.Sprintf(
 			"the ServiceImport no longer exists after unexporting the service on cluster %q while still exported on cluster %q",
 			clients[0].name, clients[1].name))
-
-		By(fmt.Sprintf("Unexporting the service on the second cluster %q", clients[1].name))
 
 		t.deleteServiceExport(&clients[1])
 
@@ -173,8 +169,6 @@ func testClusterIPServiceImport() {
 			Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.ClusterSetIP), reportNonConformant(
 				fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
 		}
-
-		By("Unexporting the service")
 
 		t.deleteServiceExport(&clients[0])
 
@@ -285,8 +279,6 @@ func testHeadlessServiceImport() {
 			Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.Headless), reportNonConformant(
 				fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
 		}
-
-		By("Unexporting the service")
 
 		t.deleteServiceExport(&clients[0])
 

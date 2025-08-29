@@ -197,11 +197,15 @@ func (t *testDriver) createServiceExport(c *clusterClients, serviceExport *v1alp
 	_, err := c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Create(
 		ctx, serviceExport, metav1.CreateOptions{})
 	Expect(err).ToNot(HaveOccurred())
+
+	By(fmt.Sprintf("Service \"%s/%s\" exported on cluster %q", t.namespace, helloServiceName, c.name))
 }
 
 func (t *testDriver) deleteServiceExport(c *clusterClients) {
 	Expect(c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Delete(ctx, helloServiceName,
 		metav1.DeleteOptions{})).ToNot(HaveOccurred())
+
+	By(fmt.Sprintf("Service \"%s/%s\" unexported on cluster %q", t.namespace, helloServiceName, c.name))
 }
 
 func (t *testDriver) deployHelloService(c *clusterClients, service *corev1.Service) {
@@ -210,8 +214,10 @@ func (t *testDriver) deployHelloService(c *clusterClients, service *corev1.Servi
 		Expect(err).ToNot(HaveOccurred())
 	}
 
-	_, err := c.k8s.CoreV1().Services(t.namespace).Create(ctx, service, metav1.CreateOptions{})
+	deployed, err := c.k8s.CoreV1().Services(t.namespace).Create(ctx, service, metav1.CreateOptions{})
 	Expect(err).ToNot(HaveOccurred())
+
+	By(fmt.Sprintf("Service \"%s/%s\" deployed on cluster %q", deployed.Namespace, deployed.Name, c.name))
 }
 
 func (t *testDriver) getServiceImport(c *clusterClients, name string) *v1alpha1.ServiceImport {
