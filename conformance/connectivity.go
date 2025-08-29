@@ -29,6 +29,10 @@ import (
 var _ = Describe("", func() {
 	t := newTestDriver()
 
+	BeforeEach(func() {
+		t.autoExportService = false
+	})
+
 	Context("Connectivity to a service that is not exported", func() {
 		It("should be inaccessible", Label(RequiredLabel), func() {
 			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#exporting-services")

@@ -144,10 +144,11 @@ func setupClients() error {
 }
 
 type testDriver struct {
-	namespace       string
-	helloService    *corev1.Service
-	helloDeployment *appsv1.Deployment
-	requestPod      *corev1.Pod
+	namespace         string
+	helloService      *corev1.Service
+	helloDeployment   *appsv1.Deployment
+	requestPod        *corev1.Pod
+	autoExportService bool
 }
 
 func newTestDriver() *testDriver {
@@ -158,6 +159,7 @@ func newTestDriver() *testDriver {
 		t.helloService = newHelloService()
 		t.helloDeployment = newHelloDeployment()
 		t.requestPod = newRequestPod()
+		t.autoExportService = true
 	})
 
 	JustBeforeEach(func() {
@@ -177,6 +179,10 @@ func newTestDriver() *testDriver {
 		// Start the request pod on all clusters
 		for _, client := range clients {
 			t.startRequestPod(ctx, client)
+		}
+
+		if t.autoExportService {
+			t.createServiceExport(&clients[0], newHelloServiceExport())
 		}
 	})
 
@@ -353,11 +359,21 @@ func newTwoClusterTestDriver(t *testDriver) *twoClusterTestDriver {
 
 		tt.helloService2 = newHelloService()
 		tt.helloServiceExport2 = newHelloServiceExport()
+		t.autoExportService = false
 	})
 
 	JustBeforeEach(func() {
+		t.createServiceExport(&clients[0], newHelloServiceExport())
+
+		// The conflict resolution policy in the MCS spec (KEP 1645) allows an implementation to favor maintaining
+		// service continuity and avoiding potentially disruptive changes, as such, an implementation may choose the
+		// first observed exported service when resolving conflicts. To support this, verify the ServiceImport is
+		// created on the first cluster prior to deploying on the second cluster.
+		t.awaitServiceImport(&clients[0], helloServiceName, false, nil)
+
 		// Delay a little before deploying on the second cluster to ensure the first cluster's ServiceExport timestamp
-		// is older so conflict checking is deterministic. Make the delay at least 1 sec as creation timestamps have seconds granularity.
+		// is older so conflict checking is deterministic for implementations that use the timestamp when resolving conflicts.
+		// Make the delay at least 1 sec as creation timestamps have seconds granularity.
 		time.Sleep(1100 * time.Millisecond)
 
 		t.deployHelloService(&clients[1], tt.helloService2)
