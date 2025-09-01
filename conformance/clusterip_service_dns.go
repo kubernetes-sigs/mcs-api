@@ -32,10 +32,6 @@ import (
 var _ = Describe("", Label(OptionalLabel, DNSLabel, ClusterIPLabel), func() {
 	t := newTestDriver()
 
-	JustBeforeEach(func() {
-		t.createServiceExport(&clients[0], newHelloServiceExport())
-	})
-
 	Specify("A DNS lookup of the <service>.<ns>.svc.clusterset.local domain for a ClusterIP service should resolve to the "+
 		"clusterset IP", func() {
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#dns")

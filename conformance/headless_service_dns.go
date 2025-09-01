@@ -45,10 +45,6 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, HeadlessLabel), func() {
 		t.helloDeployment.Spec.Replicas = ptr.To(int32(replicas))
 	})
 
-	JustBeforeEach(func() {
-		t.createServiceExport(&clients[0], newHelloServiceExport())
-	})
-
 	Specify("A DNS query of the <service>.<ns>.svc.clusterset.local domain for a headless service should return the "+
 		"ready endpoint addresses of all the backing pods", func() {
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#dns")

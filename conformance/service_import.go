@@ -44,10 +44,6 @@ func testGeneralServiceImport() {
 		helloServiceExport = newHelloServiceExport()
 	})
 
-	JustBeforeEach(func() {
-		t.createServiceExport(&clients[0], helloServiceExport)
-	})
-
 	assertHasKeyValues := func(g Gomega, actual, expected map[string]string) {
 		for k, v := range expected {
 			g.Expect(actual).To(HaveKeyWithValue(k, v), reportNonConformant(""))
@@ -148,16 +144,7 @@ func testGeneralServiceImport() {
 }
 
 func testClusterIPServiceImport() {
-	var helloServiceExport *v1alpha1.ServiceExport
 	t := newTestDriver()
-
-	BeforeEach(func() {
-		helloServiceExport = newHelloServiceExport()
-	})
-
-	JustBeforeEach(func() {
-		t.createServiceExport(&clients[0], helloServiceExport)
-	})
 
 	Specify("Exporting a ClusterIP service should create a ServiceImport of type ClusterSetIP in the service's namespace in each cluster. "+
 		"Unexporting should delete the ServiceImport", Label(RequiredLabel), func() {
@@ -267,10 +254,6 @@ func testHeadlessServiceImport() {
 		t.helloService.Spec.ClusterIP = corev1.ClusterIPNone
 	})
 
-	JustBeforeEach(func() {
-		t.createServiceExport(&clients[0], newHelloServiceExport())
-	})
-
 	Specify("Exporting a headless service should create a ServiceImport of type Headless in the service's namespace in each cluster. "+
 		"Unexporting should delete the ServiceImport", Label(RequiredLabel), func() {
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-types")
@@ -309,10 +292,6 @@ func testExternalNameService() {
 		t.helloService.Spec.ExternalName = "example.com"
 	})
 
-	JustBeforeEach(func() {
-		t.createServiceExport(&clients[0], newHelloServiceExport())
-	})
-
 	Specify("Exporting an ExternalName service should set ServiceExport Valid condition to False", Label(RequiredLabel), func() {
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/blob/master/keps/sig-multicluster/1645-multi-cluster-services-api/README.md#service-types")
 
@@ -329,15 +308,18 @@ func testServiceTypeConflict() {
 		t.helloService2.Spec.ClusterIP = corev1.ClusterIPNone
 	})
 
-	JustBeforeEach(func() {
-		t.createServiceExport(&clients[0], newHelloServiceExport())
-	})
-
 	Specify("A service exported on two clusters with conflicting headlessness should apply the conflict resolution policy and "+
 		"report a Conflict condition on the ServiceExport", Label(RequiredLabel), func() {
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#headlessness")
 
 		t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
 		t.awaitServiceExportCondition(&clients[1], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
+
+		for i := range clients {
+			serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, true, nil)
+
+			Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.ClusterSetIP), reportNonConformant(
+				fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
+		}
 	})
 }

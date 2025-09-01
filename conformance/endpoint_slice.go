@@ -34,10 +34,6 @@ const K8sEndpointSliceManagedByName = "endpointslice-controller.k8s.io"
 var _ = Describe("", Label(OptionalLabel, EndpointSliceLabel), func() {
 	t := newTestDriver()
 
-	JustBeforeEach(func() {
-		t.createServiceExport(&clients[0], newHelloServiceExport())
-	})
-
 	Specify("Exporting a service should create an MCS EndpointSlice in the service's namespace in each cluster with the "+
 		"required MCS labels. Unexporting should delete the EndpointSlice.", func() {
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#using-endpointslice-objects-to-track-endpoints")
