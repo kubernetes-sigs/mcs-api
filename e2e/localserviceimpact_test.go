@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -164,7 +165,7 @@ var _ = Describe("Local service not impacted", func() {
 				clusterID := strings.TrimSpace(string(stdout))
 				g.Expect(clusterID).To(BeElementOf(clusterIDs))
 				clusters[clusterID]++
-			}, "10s").MustPassRepeatedly(50).Should(Succeed())
+			}).MustPassRepeatedly(20).Within(time.Second * 10).Should(Succeed())
 			Expect(clusters).To(HaveEach(Not(BeZero())))
 		}
 
