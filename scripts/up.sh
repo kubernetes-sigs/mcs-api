@@ -50,6 +50,7 @@ kind load docker-image "${controller_image}" --name "${c2}"
 
 echo "Configuring CoreDNS"
 function update_coredns() {
+  kubectl --kubeconfig ${1} apply -f ../config/crd
   kubectl --kubeconfig ${1} patch clusterrole system:coredns --type json --patch-file coredns-rbac.json
   # Patching Corefile based on Cilium documentation: https://docs.cilium.io/en/latest/network/clustermesh/mcsapi/#prerequisites
   kubectl --kubeconfig ${1} get configmap -n kube-system coredns -o yaml | \
@@ -87,8 +88,8 @@ add_routes "${c1}" "${c2}-control-plane" "${kubeconfig2}"
 add_routes "${c2}" "${c1}-control-plane" "${kubeconfig1}"
 echo "Cluster networks connected"
 
-${k1} apply -f ../config/crd -f ../config/rbac
-${k2} apply -f ../config/crd -f ../config/rbac
+${k1} apply -f ../config/rbac
+${k2} apply -f ../config/rbac
 
 ${k1} create sa mcs-api-controller
 ${k1} create clusterrolebinding mcs-api-binding --clusterrole=mcs-derived-service-manager --serviceaccount=default:mcs-api-controller
