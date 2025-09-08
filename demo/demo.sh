@@ -44,8 +44,8 @@ trap cleanup EXIT
 tmux send -t "$c1_pane" "${k1} logs -f mcs-api-controller" Enter
 
 desc "Create our service in each cluster"
-run "${k1} apply -f ${script_dir}/yaml/dep1.yaml -f ${script_dir}/yaml/svc.yaml"
-run "${k2} apply -f ${script_dir}/yaml/dep2.yaml -f ${script_dir}/yaml/svc.yaml"
+run "${k1} apply -f ${demo_dir}/yaml/dep1.yaml -f ${demo_dir}/yaml/svc.yaml"
+run "${k2} apply -f ${demo_dir}/yaml/dep2.yaml -f ${demo_dir}/yaml/svc.yaml"
 run "${k1} get endpointslice -n demo"
 
 desc "Lets look at some requests to the service in cluster 1"
@@ -55,12 +55,12 @@ desc "Ok, looks normal. Let's import the service from our other cluster"
 ep_1=$(${k1} get endpointslice -n demo -l 'kubernetes.io/service-name=serve' --template="{{(index .items 0).metadata.name}}")
 ep_2=$(${k2} get endpointslice -n demo -l 'kubernetes.io/service-name=serve' --template="{{(index .items 0).metadata.name}}")
 
-run "${k1} get endpointslice -n demo ${ep_1} -o yaml | ${script_dir}/edit-meta --metadata '{name: imported-${ep_1}, namespace: demo, labels: {multicluster.kubernetes.io/service-name: serve}}' > ${script_dir}/yaml/slice-1.tmp"
-run "${k2} get endpointslice -n demo ${ep_2} -o yaml | ${script_dir}/edit-meta --metadata '{name: imported-${ep_2}, namespace: demo, labels: {multicluster.kubernetes.io/service-name: serve}}' > ${script_dir}/yaml/slice-2.tmp"
-run "${k1} apply -f ${script_dir}/yaml/serviceimport.yaml -f ${script_dir}/yaml/slice-1.tmp -f ${script_dir}/yaml/slice-2.tmp"
-run "${k2} apply -f ${script_dir}/yaml/serviceimport.yaml -f ${script_dir}/yaml/slice-1.tmp -f ${script_dir}/yaml/slice-2.tmp"
-run "${k1} apply -f ${script_dir}/yaml/serviceimport-with-vip.yaml -f ${script_dir}/yaml/slice-1.tmp -f ${script_dir}/yaml/slice-2.tmp"
-run "${k2} apply -f ${script_dir}/yaml/serviceimport-with-vip.yaml -f ${script_dir}/yaml/slice-1.tmp -f ${script_dir}/yaml/slice-2.tmp"
+run "${k1} get endpointslice -n demo ${ep_1} -o yaml | ${demo_dir}/edit-meta --metadata '{name: imported-${ep_1}, namespace: demo, labels: {multicluster.kubernetes.io/service-name: serve}}' > ${demo_dir}/yaml/slice-1.tmp"
+run "${k2} get endpointslice -n demo ${ep_2} -o yaml | ${demo_dir}/edit-meta --metadata '{name: imported-${ep_2}, namespace: demo, labels: {multicluster.kubernetes.io/service-name: serve}}' > ${demo_dir}/yaml/slice-2.tmp"
+run "${k1} apply -f ${demo_dir}/yaml/serviceimport.yaml -f ${demo_dir}/yaml/slice-1.tmp -f ${demo_dir}/yaml/slice-2.tmp"
+run "${k2} apply -f ${demo_dir}/yaml/serviceimport.yaml -f ${demo_dir}/yaml/slice-1.tmp -f ${demo_dir}/yaml/slice-2.tmp"
+run "${k1} apply -f ${demo_dir}/yaml/serviceimport-with-vip.yaml -f ${demo_dir}/yaml/slice-1.tmp -f ${demo_dir}/yaml/slice-2.tmp"
+run "${k2} apply -f ${demo_dir}/yaml/serviceimport-with-vip.yaml -f ${demo_dir}/yaml/slice-1.tmp -f ${demo_dir}/yaml/slice-2.tmp"
 
 desc "See what we've created..."
 run "${k1} get -n demo serviceimports"
@@ -78,6 +78,7 @@ desc "Now grab the multi-cluster VIP from the serviceimport..."
 run "${k1} get serviceimport -n demo -o go-template --template='{{index (index .items 0).spec.ips 0}}{{\"\n\"}}'"
 desc "...and connect to it"
 run "${k1} -n demo run -i --rm --restart=Never --image=jeremyot/request:0a40de8 request -- --duration=10s --address=${vip}"
+run "${k1} -n demo run -i --rm --restart=Never --image=jeremyot/request:0a40de8 request -- --duration=10s --address=serve.demo.svc.clusterset.local"
 desc "We have a multi-cluster service!"
 desc "See for yourself"
 desc "Cluster 1: kubectl --kubeconfig ${kubeconfig1} -n demo"
