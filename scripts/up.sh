@@ -39,38 +39,22 @@ if [ ! -z "${BUILD_CONTROLLER}" ] || [ -z "$(docker images mcs-api-controller -q
   popd
 fi
 
-coredns_version="1.11.4"
-coredns_image="multicluster/coredns:latest"
-coredns_path="/tmp/coredns-${coredns_version}"
-if [ ! -d "${coredns_path}" ]; then
-  pushd /tmp
-  git clone --depth 1 https://github.com/coredns/coredns.git --branch v${coredns_version} --single-branch "${coredns_path}"
-  popd
-fi
-pushd "${coredns_path}"
-if ! grep -q -F 'multicluster:github.com/coredns/multicluster' "plugin.cfg"; then
-  sed -i -e 's/^kubernetes:kubernetes$/&\nmulticluster:github.com\/coredns\/multicluster/' "plugin.cfg"
-fi
-docker run --rm \
-    -v $PWD:/go/src/github.com/coredns/coredns -w /go/src/github.com/coredns/coredns \
-        golang:1.23 make gen coredns GOFLAGS=-buildvcs=false
-docker build -t "${coredns_image}" .
-popd
-
 kind create cluster --name "${c1}" --config "$PWD/${c1}.yaml"
 kind create cluster --name "${c2}" --config "$PWD/${c2}.yaml"
 
 kind get kubeconfig --name "${c1}" > "${kubeconfig1}"
 kind get kubeconfig --name "${c2}" > "${kubeconfig2}"
 
-kind load docker-image "${controller_image}" "${coredns_image}" --name "${c1}"
-kind load docker-image "${controller_image}" "${coredns_image}" --name "${c2}"
+kind load docker-image "${controller_image}" --name "${c1}"
+kind load docker-image "${controller_image}" --name "${c2}"
 
 echo "Configuring CoreDNS"
 function update_coredns() {
   kubectl --kubeconfig ${1} patch clusterrole system:coredns --type json --patch-file coredns-rbac.json
+  # Patching Corefile based on Cilium documentation: https://docs.cilium.io/en/latest/network/clustermesh/mcsapi/#prerequisites
   kubectl --kubeconfig ${1} get configmap -n kube-system coredns -o yaml | \
-    sed -E -e 's/^(\s*)kubernetes.*cluster\.local.*$/\1multicluster clusterset.local\n&/' | \
+    sed -e 's/cluster\.local/cluster.local clusterset.local/g' | \
+    sed -E 's/^(.*)kubernetes(.*)\{/\1kubernetes\2{\n\1   multicluster clusterset.local/' | \
     kubectl --kubeconfig ${1} replace -f-
   kubectl --kubeconfig ${1} rollout restart deploy -n kube-system coredns
 }

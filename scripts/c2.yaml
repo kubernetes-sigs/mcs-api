@@ -9,5 +9,6 @@ nodes:
     - |
       kind: ClusterConfiguration
       dns:
-        imageRepository: multicluster
-        imageTag: latest
+        # TODO: Remove this after Kubernetes 1.35.
+        # Reference: https://github.com/kubernetes/kubernetes/pull/132288
+        imageTag: v1.12.2
