@@ -72,6 +72,15 @@ spec:
                 - ports
                 - type
               properties:
+                ipFamilies:
+                  description: IPFamilies identifies all the IPFamilies assigned for this ServiceImport.
+                  type: array
+                  maxItems: 2
+                  items:
+                    description: |-
+                      IPFamily represents the IP Family (IPv4 or IPv6). This type is used
+                      to express the family of an IP expressed by a type (e.g. service.spec.ipFamilies).
+                    type: string
                 ips:
                   description: ip will be used as the VIP for this service when type is ClusterSetIP.
                   type: array
