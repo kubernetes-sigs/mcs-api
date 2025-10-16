@@ -26,3 +26,10 @@ var (
 	//go:embed multicluster.x-k8s.io_serviceimports.yaml
 	ServiceImportCRD []byte
 )
+
+const (
+	// ReleaseVersionLabel is the label which indicate the release version
+	ReleaseVersionLabel = "multicluster.x-k8s.io/release-version"
+	// CustomResourceDefinitionSchemaRevisionLabel is the label which holds the CRD schema revision
+	CustomResourceDefinitionSchemaRevisionLabel = "multicluster.x-k8s.io/crd-schema-revision"
+)
