@@ -247,8 +247,11 @@ func testClusterIPServiceImport() {
 				}
 			})
 
-			Specify("should expose the union of the constituent service ports", Label(RequiredLabel), func() {
+			Specify("should expose the union of the constituent service ports and raise a conflict", Label(RequiredLabel), func() {
 				AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-port")
+
+				t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
+				t.awaitServiceExportCondition(&clients[1], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
 
 				t.awaitServiceImport(&clients[0], t.helloService.Name, false,
 					func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
