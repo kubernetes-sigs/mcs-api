@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
 )
 
@@ -178,6 +179,38 @@ func testClusterIPServiceImport() {
 					"The SessionAffinityConfig of the ServiceImport does not match the exported Service's SessionAffinityConfig"))
 			})
 		})
+
+	Context("", func() {
+		BeforeEach(func() {
+			t.helloService.Spec.InternalTrafficPolicy = ptr.To(corev1.ServiceInternalTrafficPolicyCluster)
+		})
+		Specify("The InternalTrafficPolicy for a ClusterSetIP ServiceImport should match the exported service's InternalTrafficPolicy",
+			Label(RequiredLabel), func() {
+				AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#internal-traffic-policy")
+
+				t.awaitServiceImport(&clients[0], helloServiceName, false, func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
+					g.Expect(serviceImport.Spec.InternalTrafficPolicy).To(Equal(t.helloService.Spec.InternalTrafficPolicy), reportNonConformant(
+						"The InternalTrafficPolicy of the ServiceImport does not match the exported Service's InternalTrafficPolicy"))
+				})
+			},
+		)
+	})
+
+	Context("", func() {
+		BeforeEach(func() {
+			t.helloService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
+		})
+		Specify("The TrafficDistribution for a ClusterSetIP ServiceImport should match the exported service's TrafficDistribution",
+			Label(RequiredLabel), func() {
+				AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#traffic-distribution")
+
+				t.awaitServiceImport(&clients[0], helloServiceName, false, func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
+					g.Expect(serviceImport.Spec.TrafficDistribution).To(Equal(t.helloService.Spec.TrafficDistribution), reportNonConformant(
+						"The TrafficDistribution of the ServiceImport does not match the exported Service's TrafficDistribution"))
+				})
+			},
+		)
+	})
 
 	Specify("An IP should be allocated for a ClusterSetIP ServiceImport", Label(RequiredLabel), func() {
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#clustersetip")

@@ -20,7 +20,7 @@ BASE_REF="${PULL_BASE_SHA:-master}"
 crd_changed="$(git diff --name-only "${BASE_REF}" | grep -c "^config/crd/.*\.yaml$")"
 version_label_changed="$(git diff -U0 "${BASE_REF}" -- "config/crd-base/" | grep -c "multicluster.x-k8s.io/crd-schema-revision")"
 
-if [ "${crd_changed}" -gt 0 ] && [ "${version_label_changed}" -ne 2 ]; then
+if [ "${crd_changed}" -gt 0 ] && [ "${version_label_changed}" -ne 4 ]; then
 	echo "❌ CRDs were modified, but the CRD revision labels were not changed in 'config/crd-base/'. Please bump the CRDs revision."
 	exit 1
 fi
