@@ -27,41 +27,41 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	"sigs.k8s.io/mcs-api/pkg/apis/v1beta1"
 )
 
 var _ = Describe("ServiceImport", func() {
 	var (
-		serviceImport      v1alpha1.ServiceImport
+		serviceImport      v1beta1.ServiceImport
 		serviceName        types.NamespacedName
 		derivedServiceName types.NamespacedName
 	)
 	ctx := context.Background()
 	Context("should be ignored", func() {
 		Specify("when headless", func() {
-			Expect(shouldIgnoreImport(&v1alpha1.ServiceImport{
+			Expect(shouldIgnoreImport(&v1beta1.ServiceImport{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
 					Name:      "headless",
 				},
-				Spec: v1alpha1.ServiceImportSpec{
-					Type: v1alpha1.Headless,
-					Ports: []v1alpha1.ServicePort{
+				Spec: v1beta1.ServiceImportSpec{
+					Type: v1beta1.Headless,
+					Ports: []v1beta1.ServicePort{
 						{Port: 80},
 					},
 				},
 			})).To(BeTrue())
 		})
 		Specify("when deleted", func() {
-			Expect(shouldIgnoreImport(&v1alpha1.ServiceImport{
+			Expect(shouldIgnoreImport(&v1beta1.ServiceImport{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:         testNS,
 					Name:              "deleted",
 					DeletionTimestamp: &metav1.Time{Time: time.Now()},
 				},
-				Spec: v1alpha1.ServiceImportSpec{
-					Type: v1alpha1.ClusterSetIP,
-					Ports: []v1alpha1.ServicePort{
+				Spec: v1beta1.ServiceImportSpec{
+					Type: v1beta1.ClusterSetIP,
+					Ports: []v1beta1.ServicePort{
 						{Port: 80},
 					},
 				},
@@ -72,14 +72,14 @@ var _ = Describe("ServiceImport", func() {
 		BeforeEach(func() {
 			serviceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("svc-%v", rand.Uint64())}
 			derivedServiceName = types.NamespacedName{Namespace: testNS, Name: derivedName(serviceName)}
-			serviceImport = v1alpha1.ServiceImport{
+			serviceImport = v1beta1.ServiceImport{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
 					Name:      serviceName.Name,
 				},
-				Spec: v1alpha1.ServiceImportSpec{
-					Type: v1alpha1.ClusterSetIP,
-					Ports: []v1alpha1.ServicePort{
+				Spec: v1beta1.ServiceImportSpec{
+					Type: v1beta1.ClusterSetIP,
+					Ports: []v1beta1.ServicePort{
 						{Port: 80},
 					},
 				},
@@ -88,13 +88,13 @@ var _ = Describe("ServiceImport", func() {
 		})
 		It("has derived service annotation", func() {
 			Eventually(func() string {
-				var s v1alpha1.ServiceImport
+				var s v1beta1.ServiceImport
 				Expect(k8s.Get(ctx, serviceName, &s)).To(Succeed())
 				return s.Annotations[DerivedServiceAnnotation]
 			}, 10).Should(Equal(derivedName(serviceName)))
 		}, 10)
 		It("has derived service IP", func() {
-			var s v1alpha1.ServiceImport
+			var s v1beta1.ServiceImport
 			Eventually(func() string {
 				Expect(k8s.Get(ctx, serviceName, &s)).To(Succeed())
 				if len(s.Spec.IPs) > 0 {
@@ -116,7 +116,7 @@ var _ = Describe("ServiceImport", func() {
 			Eventually(func() error {
 				return k8s.Get(ctx, derivedServiceName, &s)
 			}, 10).Should(Succeed())
-			var imp v1alpha1.ServiceImport
+			var imp v1beta1.ServiceImport
 			Expect(k8s.Get(ctx, serviceName, &imp)).To(Succeed())
 			Expect(k8s.Delete(ctx, &imp)).To(Succeed())
 			Eventually(func() error {
@@ -128,14 +128,14 @@ var _ = Describe("ServiceImport", func() {
 		BeforeEach(func() {
 			serviceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("svc-%v", rand.Uint64())}
 			derivedServiceName = types.NamespacedName{Namespace: testNS, Name: derivedName(serviceName)}
-			serviceImport = v1alpha1.ServiceImport{
+			serviceImport = v1beta1.ServiceImport{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
 					Name:      serviceName.Name,
 				},
-				Spec: v1alpha1.ServiceImportSpec{
-					Type: v1alpha1.ClusterSetIP,
-					Ports: []v1alpha1.ServicePort{
+				Spec: v1beta1.ServiceImportSpec{
+					Type: v1beta1.ClusterSetIP,
+					Ports: []v1beta1.ServicePort{
 						{Port: 80},
 					},
 				},
@@ -143,7 +143,7 @@ var _ = Describe("ServiceImport", func() {
 			Expect(k8s.Create(ctx, &serviceImport)).To(Succeed())
 		})
 		It("updates derived service IP", func() {
-			var svcImport v1alpha1.ServiceImport
+			var svcImport v1beta1.ServiceImport
 			var s v1.Service
 			Eventually(func() error {
 				return k8s.Get(ctx, derivedServiceName, &s)
@@ -161,14 +161,14 @@ var _ = Describe("ServiceImport", func() {
 		BeforeEach(func() {
 			serviceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("svc-%v", rand.Uint64())}
 			derivedServiceName = types.NamespacedName{Namespace: testNS, Name: derivedName(serviceName)}
-			serviceImport = v1alpha1.ServiceImport{
+			serviceImport = v1beta1.ServiceImport{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testNS,
 					Name:      serviceName.Name,
 				},
-				Spec: v1alpha1.ServiceImportSpec{
-					Type: v1alpha1.ClusterSetIP,
-					Ports: []v1alpha1.ServicePort{
+				Spec: v1beta1.ServiceImportSpec{
+					Type: v1beta1.ClusterSetIP,
+					Ports: []v1beta1.ServicePort{
 						{Port: 80},
 					},
 					IPs: []string{"10.42.42.42"},
@@ -177,7 +177,7 @@ var _ = Describe("ServiceImport", func() {
 			Expect(k8s.Create(ctx, &serviceImport)).To(Succeed())
 		})
 		It("updates service loadbalancer status with service import IPs", func() {
-			var svcImport v1alpha1.ServiceImport
+			var svcImport v1beta1.ServiceImport
 			var s v1.Service
 			Eventually(func() error {
 				return k8s.Get(ctx, derivedServiceName, &s)
