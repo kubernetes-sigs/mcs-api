@@ -40,7 +40,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	"sigs.k8s.io/mcs-api/pkg/apis/v1beta1"
 	mcsclient "sigs.k8s.io/mcs-api/pkg/client/clientset/versioned"
 )
 
@@ -124,11 +124,11 @@ func setupClients() error {
 				return fmt.Errorf("error setting up an MCS API client on context %s: %w", name, err)
 			}
 
-			if _, err := mcsClient.MulticlusterV1alpha1().ServiceExports("").List(context.TODO(), metav1.ListOptions{}); err != nil {
+			if _, err := mcsClient.MulticlusterV1beta1().ServiceExports("").List(context.TODO(), metav1.ListOptions{}); err != nil {
 				return fmt.Errorf("error listing ServiceExports on context %s: %w. Is the MCS API installed?", name, err)
 			}
 
-			if _, err := mcsClient.MulticlusterV1alpha1().ServiceImports("").List(context.TODO(), metav1.ListOptions{}); err != nil {
+			if _, err := mcsClient.MulticlusterV1beta1().ServiceImports("").List(context.TODO(), metav1.ListOptions{}); err != nil {
 				return fmt.Errorf("error listing ServiceImports on context %s: %w. Is the MCS API installed?", name, err)
 			}
 
@@ -199,8 +199,8 @@ func newTestDriver() *testDriver {
 	return t
 }
 
-func (t *testDriver) createServiceExport(c *clusterClients, serviceExport *v1alpha1.ServiceExport) {
-	_, err := c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Create(
+func (t *testDriver) createServiceExport(c *clusterClients, serviceExport *v1beta1.ServiceExport) {
+	_, err := c.mcs.MulticlusterV1beta1().ServiceExports(t.namespace).Create(
 		ctx, serviceExport, metav1.CreateOptions{})
 	Expect(err).ToNot(HaveOccurred())
 
@@ -208,7 +208,7 @@ func (t *testDriver) createServiceExport(c *clusterClients, serviceExport *v1alp
 }
 
 func (t *testDriver) deleteServiceExport(c *clusterClients) {
-	Expect(c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Delete(ctx, helloServiceName,
+	Expect(c.mcs.MulticlusterV1beta1().ServiceExports(t.namespace).Delete(ctx, helloServiceName,
 		metav1.DeleteOptions{})).ToNot(HaveOccurred())
 
 	By(fmt.Sprintf("Service \"%s/%s\" unexported on cluster %q", t.namespace, helloServiceName, c.name))
@@ -226,8 +226,8 @@ func (t *testDriver) deployHelloService(c *clusterClients, service *corev1.Servi
 	By(fmt.Sprintf("Service \"%s/%s\" deployed on cluster %q", deployed.Namespace, deployed.Name, c.name))
 }
 
-func (t *testDriver) getServiceImport(c *clusterClients, name string) *v1alpha1.ServiceImport {
-	si, err := c.mcs.MulticlusterV1alpha1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
+func (t *testDriver) getServiceImport(c *clusterClients, name string) *v1beta1.ServiceImport {
+	si, err := c.mcs.MulticlusterV1beta1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) || errors.Is(err, context.DeadlineExceeded) ||
 		(err != nil && strings.Contains(err.Error(), "rate limiter")) {
 		return nil
@@ -239,8 +239,8 @@ func (t *testDriver) getServiceImport(c *clusterClients, name string) *v1alpha1.
 }
 
 func (t *testDriver) awaitServiceImport(c *clusterClients, name string, reportNonConformanceOnMissing bool,
-	verify func(Gomega, *v1alpha1.ServiceImport)) *v1alpha1.ServiceImport {
-	var serviceImport *v1alpha1.ServiceImport
+	verify func(Gomega, *v1beta1.ServiceImport)) *v1beta1.ServiceImport {
+	var serviceImport *v1beta1.ServiceImport
 
 	Eventually(func(g Gomega) {
 		si := t.getServiceImport(c, name)
@@ -269,7 +269,7 @@ func (t *testDriver) awaitServiceImport(c *clusterClients, name string, reportNo
 
 func (t *testDriver) awaitNoServiceImport(c *clusterClients, name, nonConformanceMsg string) {
 	Eventually(func() bool {
-		_, err := c.mcs.MulticlusterV1alpha1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
+		_, err := c.mcs.MulticlusterV1beta1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
 			return true
 		}
@@ -282,22 +282,22 @@ func (t *testDriver) awaitNoServiceImport(c *clusterClients, name, nonConformanc
 
 func (t *testDriver) ensureServiceImport(c *clusterClients, name, nonConformanceMsg string) {
 	Consistently(func() error {
-		_, err := c.mcs.MulticlusterV1alpha1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
+		_, err := c.mcs.MulticlusterV1beta1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
 		return err
 	}, 5*time.Second, 100*time.Millisecond).ShouldNot(HaveOccurred(), reportNonConformant(nonConformanceMsg))
 }
 
 func (t *testDriver) ensureNoServiceImport(c *clusterClients, name, nonConformanceMsg string) {
 	Consistently(func() bool {
-		_, err := c.mcs.MulticlusterV1alpha1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
+		_, err := c.mcs.MulticlusterV1beta1().ServiceImports(t.namespace).Get(ctx, name, metav1.GetOptions{})
 		return apierrors.IsNotFound(err)
 	}, 5*time.Second, 100*time.Millisecond).Should(BeTrue(), reportNonConformant(nonConformanceMsg))
 }
 
-func (t *testDriver) awaitServiceExportCondition(c *clusterClients, condType v1alpha1.ServiceExportConditionType,
+func (t *testDriver) awaitServiceExportCondition(c *clusterClients, condType v1beta1.ServiceExportConditionType,
 	wantStatus metav1.ConditionStatus) {
 	Eventually(func() bool {
-		se, err := c.mcs.MulticlusterV1alpha1().ServiceExports(t.namespace).Get(ctx, helloServiceName, metav1.GetOptions{})
+		se, err := c.mcs.MulticlusterV1beta1().ServiceExports(t.namespace).Get(ctx, helloServiceName, metav1.GetOptions{})
 		Expect(err).ToNot(HaveOccurred())
 
 		cond := meta.FindStatusCondition(se.Status.Conditions, string(condType))
@@ -348,7 +348,7 @@ func (t *testDriver) awaitCmdOutputMatches(c *clusterClients, command []string, 
 type twoClusterTestDriver struct {
 	*testDriver
 	helloService2       *corev1.Service
-	helloServiceExport2 *v1alpha1.ServiceExport
+	helloServiceExport2 *v1beta1.ServiceExport
 }
 
 func newTwoClusterTestDriver(t *testDriver) *twoClusterTestDriver {
@@ -383,11 +383,11 @@ func newTwoClusterTestDriver(t *testDriver) *twoClusterTestDriver {
 	return tt
 }
 
-func toMCSPorts(from []corev1.ServicePort) []v1alpha1.ServicePort {
-	var mcsPorts []v1alpha1.ServicePort
+func toMCSPorts(from []corev1.ServicePort) []v1beta1.ServicePort {
+	var mcsPorts []v1beta1.ServicePort
 
 	for _, port := range from {
-		mcsPorts = append(mcsPorts, v1alpha1.ServicePort{
+		mcsPorts = append(mcsPorts, v1beta1.ServicePort{
 			Name:        port.Name,
 			Protocol:    port.Protocol,
 			Port:        port.Port,
@@ -398,8 +398,8 @@ func toMCSPorts(from []corev1.ServicePort) []v1alpha1.ServicePort {
 	return sortMCSPorts(mcsPorts)
 }
 
-func sortMCSPorts(p []v1alpha1.ServicePort) []v1alpha1.ServicePort {
-	slices.SortFunc(p, func(a, b v1alpha1.ServicePort) int {
+func sortMCSPorts(p []v1beta1.ServicePort) []v1beta1.ServicePort {
+	slices.SortFunc(p, func(a, b v1beta1.ServicePort) int {
 		return cmp.Compare(strings.ToLower(a.Name), strings.ToLower(b.Name))
 	})
 
