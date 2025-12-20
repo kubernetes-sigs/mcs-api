@@ -27,7 +27,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	"sigs.k8s.io/mcs-api/pkg/apis/v1beta1"
 )
 
 var _ = Describe("EndpointSlice", func() {
@@ -69,7 +69,7 @@ var _ = Describe("EndpointSlice", func() {
 					Namespace: testNS,
 					Name:      sliceName.Name,
 					Labels: map[string]string{
-						v1alpha1.LabelServiceName: serviceName.Name,
+						v1beta1.LabelServiceName: serviceName.Name,
 					},
 				},
 				AddressType: discoveryv1.AddressTypeIPv4,
@@ -100,7 +100,7 @@ var _ = Describe("EndpointSlice", func() {
 					Namespace: testNS,
 					Name:      sliceName.Name,
 					Labels: map[string]string{
-						v1alpha1.LabelServiceName:    serviceName.Name,
+						v1beta1.LabelServiceName:     serviceName.Name,
 						discoveryv1.LabelServiceName: serviceName.Name,
 					},
 				},
