@@ -28,7 +28,8 @@ gobin="${GOBIN:-$(go env GOPATH)/bin}"
 
 OUTPUT_PKG=sigs.k8s.io/mcs-api/pkg/client
 OUTPUT_DIR=$SCRIPT_ROOT/pkg/client
-FQ_APIS=sigs.k8s.io/mcs-api/pkg/apis/v1alpha1
+FQ_APIS_V1ALPHA1=sigs.k8s.io/mcs-api/pkg/apis/v1alpha1
+FQ_APIS_V1BETA1=sigs.k8s.io/mcs-api/pkg/apis/v1beta1
 CLIENTSET_NAME=versioned
 CLIENTSET_PKG_NAME=clientset
 
@@ -44,22 +45,22 @@ fi
 COMMON_FLAGS="--go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt"
 
 echo "Generating clientset at ${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}"
-"${gobin}/client-gen" --clientset-name "${CLIENTSET_NAME}" --input-base "" --input "${FQ_APIS}" --output-pkg "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}" --output-dir "$OUTPUT_DIR/$CLIENTSET_PKG_NAME" ${COMMON_FLAGS}
+"${gobin}/client-gen" --clientset-name "${CLIENTSET_NAME}" --input-base "" --input "${FQ_APIS_V1ALPHA1}" --input "${FQ_APIS_V1BETA1}" --output-pkg "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}" --output-dir "$OUTPUT_DIR/$CLIENTSET_PKG_NAME" ${COMMON_FLAGS}
 
 echo "Generating listers at ${OUTPUT_PKG}/listers"
-"${gobin}/lister-gen" "${FQ_APIS}" --output-pkg "${OUTPUT_PKG}/listers" --output-dir "${OUTPUT_DIR}/listers" ${COMMON_FLAGS}
+"${gobin}/lister-gen" "${FQ_APIS_V1ALPHA1}" "${FQ_APIS_V1BETA1}" --output-pkg "${OUTPUT_PKG}/listers" --output-dir "${OUTPUT_DIR}/listers" ${COMMON_FLAGS}
 
 echo "Generating informers at ${OUTPUT_PKG}/informers"
 "${gobin}/informer-gen" \
-         "${FQ_APIS}" \
+         "${FQ_APIS_V1ALPHA1}" "${FQ_APIS_V1BETA1}" \
          --versioned-clientset-package "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}/${CLIENTSET_NAME}" \
          --listers-package "${OUTPUT_PKG}/listers" \
          --output-pkg "${OUTPUT_PKG}/informers" \
          --output-dir "${OUTPUT_DIR}/informers" \
          ${COMMON_FLAGS}
 
-echo "Generating register at ${FQ_APIS}"
-"${gobin}/register-gen" ${FQ_APIS} --output-file zz_generated.register.go ${COMMON_FLAGS}
+echo "Generating register at ${FQ_APIS_V1ALPHA1} & ${FQ_APIS_V1BETA1}"
+"${gobin}/register-gen" "${FQ_APIS_V1ALPHA1}" "${FQ_APIS_V1BETA1}" --output-file zz_generated.register.go ${COMMON_FLAGS}
 
 if [[ "${VERIFY_CODEGEN:-}" == "true" ]]; then
   diff -urN "$ORIG_OUTPUT_DIR" "$OUTPUT_DIR"
