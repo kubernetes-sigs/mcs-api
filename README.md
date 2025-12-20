@@ -2,12 +2,9 @@
 
 This repository hosts the Multi-Cluster Service APIs. Providers can import packages in this repo to ensure their multi-cluster service controller implementations will be compatible with MCS data planes.
 
-This repo contains the initial implementation according to [KEP-1645][kep] and will
-be used for iterative development as we work to meet our Alpha -> Beta
-[graduation requirements][grad-reqs].
+This repo contains the initial implementation according to [KEP-1645][kep].
 
 [kep]: https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api
-[grad-reqs]: https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#alpha---beta-graduation
 
 ## Try it out
 
