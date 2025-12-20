@@ -120,7 +120,7 @@ var _ = Describe("Local service not impacted", func() {
 		Expect(err).ToNot(HaveOccurred())
 		_, err = cluster2.k8s.CoreV1().Services(namespace).Create(ctx, &svc, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
-		_, err = cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Create(ctx, &helloServiceImport, metav1.CreateOptions{})
+		_, err = cluster1.mcs.MulticlusterV1beta1().ServiceImports(namespace).Create(ctx, &helloServiceImport, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
 		deploymentAvailable := func(clients clusterClients) func(Gomega) {
 			return func(g Gomega) {
@@ -138,7 +138,7 @@ var _ = Describe("Local service not impacted", func() {
 		exportService(ctx, cluster2, cluster1, namespace, svc.Name)
 
 		Eventually(func() []string {
-			svcImport, err := cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Get(ctx, helloServiceImport.Name, metav1.GetOptions{})
+			svcImport, err := cluster1.mcs.MulticlusterV1beta1().ServiceImports(namespace).Get(ctx, helloServiceImport.Name, metav1.GetOptions{})
 			Expect(err).ToNot(HaveOccurred())
 			return svcImport.Spec.IPs
 		}).ShouldNot(BeEmpty())

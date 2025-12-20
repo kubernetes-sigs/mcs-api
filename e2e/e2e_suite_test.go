@@ -37,7 +37,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	"sigs.k8s.io/mcs-api/pkg/apis/v1beta1"
 	mcsclient "sigs.k8s.io/mcs-api/pkg/client/clientset/versioned"
 )
 
@@ -114,7 +114,7 @@ func execCmd(k8s kubernetes.Interface, config *restclient.Config, podName string
 }
 
 func exportService(ctx context.Context, fromCluster, toCluster clusterClients, namespace string, svcName string) {
-	_, err := fromCluster.mcs.MulticlusterV1alpha1().ServiceExports(namespace).Create(ctx, &v1alpha1.ServiceExport{
+	_, err := fromCluster.mcs.MulticlusterV1beta1().ServiceExports(namespace).Create(ctx, &v1beta1.ServiceExport{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: svcName,
 		},
@@ -136,7 +136,7 @@ func exportService(ctx context.Context, fromCluster, toCluster clusterClients, n
 	importedSlice.ObjectMeta = metav1.ObjectMeta{
 		GenerateName: svcName + "-",
 		Labels: map[string]string{
-			v1alpha1.LabelServiceName: svcName,
+			v1beta1.LabelServiceName: svcName,
 		},
 	}
 
