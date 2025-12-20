@@ -20,7 +20,7 @@ metadata:
     # The revision is updated on each CRD change and reset back to 0 on every new version.
     # It can be used together with the version label when installing those CRDs
     # and prevent any downgrades.
-    multicluster.x-k8s.io/crd-schema-revision: "1"
+    multicluster.x-k8s.io/crd-schema-revision: "2"
 spec:
   group: multicluster.x-k8s.io
   scope: Namespaced
@@ -33,6 +33,23 @@ spec:
     - svcimport
   versions:
   - name: v1alpha1
+    served: true
+    storage: false
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Type
+      type: string
+      description: The type of this ServiceImport
+      jsonPath: .spec.type
+    - name: IP
+      type: string
+      description: The VIP for this ServiceImport
+      jsonPath: .spec.ips
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+  - name: v1beta1
     served: true
     storage: true
     subresources:
