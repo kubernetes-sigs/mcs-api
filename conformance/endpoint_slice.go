@@ -95,7 +95,7 @@ func (t *testDriver) awaitMCSEndpointSlice(c *clusterClients, addressType discov
 		for i := range list.Items {
 			eps := &list.Items[i]
 
-			if hasLabel(eps, v1alpha1.LabelServiceName) && hasLabel(eps, v1alpha1.LabelSourceCluster) && eps.AddressType == addressType {
+			if hasLabel(eps, v1alpha1.LabelServiceName) && hasLabel(eps, v1alpha1.LabelSourceCluster) && eps.AddressType == addressType && len(eps.Endpoints) > 0 {
 				endpointSlice = eps
 
 				if verify != nil {
