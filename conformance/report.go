@@ -43,6 +43,7 @@ const (
 	ExternalNameLabel        = "ExternalName"
 	EndpointSliceLabel       = "EndpointSlice"
 	ExportedLabelsLabel      = "ExportedLabels"
+	StrictPortConflictLabel  = "StrictPortConflict"
 	SpecRefReportEntry       = "spec-ref"
 	NonConformantReportEntry = "non-conformant"
 )
