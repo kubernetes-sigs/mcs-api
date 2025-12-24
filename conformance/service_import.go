@@ -38,12 +38,7 @@ var (
 )
 
 func testGeneralServiceImport() {
-	var helloServiceExport *v1alpha1.ServiceExport
 	t := newTestDriver()
-
-	BeforeEach(func() {
-		helloServiceExport = newHelloServiceExport()
-	})
 
 	assertHasKeyValues := func(g Gomega, actual, expected map[string]string) {
 		for k, v := range expected {
@@ -93,8 +88,8 @@ func testGeneralServiceImport() {
 
 	Context("", func() {
 		BeforeEach(func() {
-			helloServiceExport.Spec.ExportedAnnotations = map[string]string{"dummy-annotation": "true"}
-			helloServiceExport.Spec.ExportedLabels = map[string]string{"dummy-label": "true"}
+			t.helloServiceExport.Spec.ExportedAnnotations = map[string]string{"dummy-annotation": "true"}
+			t.helloServiceExport.Spec.ExportedLabels = map[string]string{"dummy-label": "true"}
 		})
 
 		Specify("Only labels and annotations specified as exported in the ServiceExport should be propagated to the ServiceImport",
@@ -103,10 +98,10 @@ func testGeneralServiceImport() {
 
 				t.awaitServiceImport(&clients[0], helloServiceName, false,
 					func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
-						assertHasKeyValues(g, serviceImport.Annotations, helloServiceExport.Annotations)
+						assertHasKeyValues(g, serviceImport.Annotations, t.helloServiceExport.Spec.ExportedAnnotations)
 						assertNotHasKeyValues(g, serviceImport.Annotations, t.helloService.Annotations)
 
-						assertHasKeyValues(g, serviceImport.Labels, helloServiceExport.Labels)
+						assertHasKeyValues(g, serviceImport.Labels, t.helloServiceExport.Spec.ExportedLabels)
 						assertNotHasKeyValues(g, serviceImport.Labels, t.helloService.Labels)
 					})
 			})
@@ -117,8 +112,8 @@ func testGeneralServiceImport() {
 
 		Context("with conflicting annotations and labels", func() {
 			BeforeEach(func() {
-				helloServiceExport.Spec.ExportedAnnotations = map[string]string{"dummy-annotation": "true"}
-				helloServiceExport.Spec.ExportedLabels = map[string]string{"dummy-label": "true"}
+				t.helloServiceExport.Spec.ExportedAnnotations = map[string]string{"dummy-annotation": "true"}
+				t.helloServiceExport.Spec.ExportedLabels = map[string]string{"dummy-label": "true"}
 
 				tt.helloServiceExport2.Spec.ExportedAnnotations = map[string]string{"dummy-annotation2": "true"}
 				tt.helloServiceExport2.Spec.ExportedLabels = map[string]string{"dummy-label2": "true"}
@@ -133,11 +128,11 @@ func testGeneralServiceImport() {
 
 					t.awaitServiceImport(&clients[0], t.helloService.Name, false,
 						func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
-							assertHasKeyValues(g, serviceImport.Annotations, helloServiceExport.Annotations)
-							assertNotHasKeyValues(g, serviceImport.Annotations, tt.helloServiceExport2.Annotations)
+							assertHasKeyValues(g, serviceImport.Annotations, t.helloServiceExport.Spec.ExportedAnnotations)
+							assertNotHasKeyValues(g, serviceImport.Annotations, tt.helloServiceExport2.Spec.ExportedAnnotations)
 
-							assertHasKeyValues(g, serviceImport.Labels, helloServiceExport.Labels)
-							assertNotHasKeyValues(g, serviceImport.Labels, tt.helloServiceExport2.Labels)
+							assertHasKeyValues(g, serviceImport.Labels, t.helloServiceExport.Spec.ExportedLabels)
+							assertNotHasKeyValues(g, serviceImport.Labels, tt.helloServiceExport2.Spec.ExportedLabels)
 						})
 				})
 		})

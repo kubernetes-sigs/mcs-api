@@ -144,11 +144,12 @@ func setupClients() error {
 }
 
 type testDriver struct {
-	namespace         string
-	helloService      *corev1.Service
-	helloDeployment   *appsv1.Deployment
-	requestPod        *corev1.Pod
-	autoExportService bool
+	namespace          string
+	helloService       *corev1.Service
+	helloServiceExport *v1alpha1.ServiceExport
+	helloDeployment    *appsv1.Deployment
+	requestPod         *corev1.Pod
+	autoExportService  bool
 }
 
 func newTestDriver() *testDriver {
@@ -157,6 +158,7 @@ func newTestDriver() *testDriver {
 	BeforeEach(func() {
 		t.namespace = fmt.Sprintf("mcs-conformance-%v", rand.Uint32())
 		t.helloService = newHelloService()
+		t.helloServiceExport = newHelloServiceExport()
 		t.helloDeployment = newHelloDeployment()
 		t.requestPod = newRequestPod()
 		t.autoExportService = true
@@ -182,7 +184,7 @@ func newTestDriver() *testDriver {
 		}
 
 		if t.autoExportService {
-			t.createServiceExport(&clients[0], newHelloServiceExport())
+			t.createServiceExport(&clients[0], t.helloServiceExport)
 		}
 	})
 
@@ -396,7 +398,7 @@ func newTwoClusterTestDriver(t *testDriver) *twoClusterTestDriver {
 	})
 
 	JustBeforeEach(func() {
-		t.createServiceExport(&clients[0], newHelloServiceExport())
+		t.createServiceExport(&clients[0], t.helloServiceExport)
 
 		// The conflict resolution policy in the MCS spec (KEP 1645) allows an implementation to favor maintaining
 		// service continuity and avoiding potentially disruptive changes, as such, an implementation may choose the
