@@ -59,6 +59,7 @@ var reportHTML string
 type testInfo struct {
 	Desc       string
 	Ref        string
+	Labels     []string
 	Failed     bool
 	Skipped    bool
 	Conformant bool
@@ -169,6 +170,13 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 				Conformant: true,
 			}
 
+			for _, currLabel := range specReport.Labels() {
+				if currLabel != label {
+					info.Labels = append(info.Labels, currLabel)
+				}
+			}
+			slices.Sort(info.Labels)
+
 			for i := range specReport.ReportEntries {
 				switch specReport.ReportEntries[i].Name {
 				case SpecRefReportEntry:
@@ -206,6 +214,9 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 	for _, l := range reportingLabels {
 		if testGroupMap[l] != nil {
 			slices.SortFunc(testGroupMap[l].Tests, func(a, b testInfo) int {
+				if cmp := slices.Compare(a.Labels, b.Labels); cmp != 0 {
+					return cmp
+				}
 				return strings.Compare(strings.TrimSpace(a.Desc), strings.TrimSpace(b.Desc))
 			})
 			testGroups = append(testGroups, *testGroupMap[l])

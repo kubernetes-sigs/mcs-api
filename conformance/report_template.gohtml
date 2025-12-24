@@ -25,6 +25,7 @@
     <thead>
         <tr>
             <th>Conformant</th>
+            <th>Labels</th>
             <th>Description</th>
         </tr>
     </thead>
@@ -39,6 +40,7 @@
         {{ else }}
             <td style="color:red">No{{.Message}}</td>
         {{end}}
+        <td>{{range $i, $l := .Labels}}{{if $i}}, {{end}}{{$l}}{{end}}</td>
         <td><a href="{{.Ref}}">{{.Desc}}</a></td>
     </tr>
     {{end}}
