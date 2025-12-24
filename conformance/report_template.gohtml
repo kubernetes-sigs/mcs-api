@@ -30,8 +30,10 @@
     </thead>
     {{range .Tests}}
     <tr>
-        {{ if .Failed }}
-            <td style="color:gray">Unknown{{.Message}}</td>
+        {{ if .Skipped }}
+            <td style="color:gray">Skipped{{.Message}}</td>
+        {{ else if .Failed }}
+            <td style="color:orange">Unknown{{.Message}}</td>
         {{ else if .Conformant }}
             <td style="color:green">Yes{{.Message}}</td>
         {{ else }}

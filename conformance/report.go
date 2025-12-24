@@ -60,6 +60,7 @@ type testInfo struct {
 	Desc       string
 	Ref        string
 	Failed     bool
+	Skipped    bool
 	Conformant bool
 	Message    string
 }
@@ -124,8 +125,7 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 			continue
 		}
 
-		if specReport.LeafNodeType != types.NodeTypeIt || specReport.State == types.SpecStatePending ||
-			specReport.State == types.SpecStateSkipped {
+		if specReport.LeafNodeType != types.NodeTypeIt || specReport.State == types.SpecStatePending {
 			continue
 		}
 
@@ -159,10 +159,13 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 				}
 			}
 
-			// If the spec failed (ie didn't pass) not due to non-conformance then we assume it encountered
-			// an unexpected error preventing conformance from being determined, and thus we'll report the
-			// conformance status as unknown.
-			if specReport.State != types.SpecStatePassed && info.Conformant {
+			if specReport.State == types.SpecStateSkipped {
+				info.Skipped = true
+				info.Message = parseFailureMessage(specReport.FailureMessage())
+			} else if specReport.State != types.SpecStatePassed && info.Conformant {
+				// If the spec failed (ie didn't pass) not due to non-conformance then we assume it encountered
+				// an unexpected error preventing conformance from being determined, and thus we'll report the
+				// conformance status as unknown.
 				info.Failed = true
 				info.Message = parseFailureMessage(specReport.FailureMessage())
 			}
