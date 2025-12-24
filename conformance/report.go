@@ -77,7 +77,27 @@ var (
 	// successive retries, so we want to just report the last one. This also allows the last message to be cleared
 	// (via cancelNonConformanceReport()) if it eventually succeeded.
 	currentSpecNonConformanceMsg atomic.Value
+
+	// specRefRegistry maps test description substrings to the KEP spec reference
+	specRefRegistry = map[string]string{}
 )
+
+// SpecifyWithSpecRef exist to be able to register a spec to the KEP alongside
+// a Specify. This is important to be able to correctly attach this spec ref
+// even if a test is skipped
+func SpecifyWithSpecRef(text string, specRef string, args ...interface{}) bool {
+	specRefRegistry[text] = specRef
+	return Specify(text, args...)
+}
+
+func lookupSpecRef(fullText string) string {
+	for desc, ref := range specRefRegistry {
+		if strings.Contains(fullText, desc) {
+			return ref
+		}
+	}
+	return ""
+}
 
 func init() {
 	dummyErr := errors.New("dummy")
@@ -99,8 +119,12 @@ func init() {
 		firstLine((&matchers.SucceedMatcher{}).FailureMessage(dummyErr))))
 }
 
-var _ = ReportBeforeEach(func(_ SpecReport) {
+var _ = ReportBeforeEach(func(specReport SpecReport) {
 	cancelNonConformanceReport()
+
+	if ref := lookupSpecRef(specReport.FullText()); ref != "" {
+		AddReportEntry(SpecRefReportEntry, ref)
+	}
 })
 
 var _ = ReportAfterEach(func(specReport SpecReport) {
