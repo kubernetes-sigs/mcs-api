@@ -25,18 +25,22 @@
     <thead>
         <tr>
             <th>Conformant</th>
+            <th>Labels</th>
             <th>Description</th>
         </tr>
     </thead>
     {{range .Tests}}
     <tr>
-        {{ if .Failed }}
-            <td style="color:gray">Unknown{{.Message}}</td>
+        {{ if .Skipped }}
+            <td style="color:gray">Skipped{{.Message}}</td>
+        {{ else if .Failed }}
+            <td style="color:orange">Unknown{{.Message}}</td>
         {{ else if .Conformant }}
             <td style="color:green">Yes{{.Message}}</td>
         {{ else }}
             <td style="color:red">No{{.Message}}</td>
         {{end}}
+        <td>{{range $i, $l := .Labels}}{{if $i}}, {{end}}{{$l}}{{end}}</td>
         <td><a href="{{.Ref}}">{{.Desc}}</a></td>
     </tr>
     {{end}}

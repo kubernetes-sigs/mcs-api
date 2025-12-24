@@ -60,36 +60,36 @@ func testGeneralServiceImport() {
 	// Other tests also unexport the service and verifies the ServiceImport is deleted, but it doesn't require more than one
 	// cluster, so it provides basic coverage in a simple single cluster environment. The following test is more comprehensive in that it
 	// exports a service from two clusters and ensures proper behavior when unexported from both.
-	Specify("A ServiceImport should only exist as long as there's at least one exporting cluster", Label(RequiredLabel), func() {
-		requireTwoClusters()
+	SpecifyWithSpecRef("A ServiceImport should only exist as long as there's at least one exporting cluster",
+		"https://github.com/kubernetes/enhancements/blob/master/keps/sig-multicluster/1645-multi-cluster-services-api/README.md#importing-services",
+		Label(RequiredLabel), func() {
+			requireTwoClusters()
 
-		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/blob/master/keps/sig-multicluster/1645-multi-cluster-services-api/README.md#importing-services")
+			t.awaitServiceImport(&clients[0], t.helloService.Name, false, nil)
 
-		t.awaitServiceImport(&clients[0], t.helloService.Name, false, nil)
+			By(fmt.Sprintf("Exporting the service on the second cluster %q", clients[1].name))
 
-		By(fmt.Sprintf("Exporting the service on the second cluster %q", clients[1].name))
+			t.deployHelloService(&clients[1], newHelloService())
+			t.createServiceExport(&clients[1], newHelloServiceExport())
 
-		t.deployHelloService(&clients[1], newHelloService())
-		t.createServiceExport(&clients[1], newHelloServiceExport())
+			// Sanity check and to also wait a bit for the second cluster to export. There's no deterministic way to tell if/when
+			// the second cluster has finished exporting other than utilizing different service ports in each cluster but service
+			// port merging behavior is already covered in another test case, so it's ideal not to rely on behavior that could
+			// cause orthogonal failures and to avoid duplicate testing.
+			t.ensureServiceImport(&clients[0], t.helloService.Name, fmt.Sprintf(
+				"the ServiceImport no longer exists after exporting on cluster %q", clients[1].name))
 
-		// Sanity check and to also wait a bit for the second cluster to export. There's no deterministic way to tell if/when
-		// the second cluster has finished exporting other than utilizing different service ports in each cluster but service
-		// port merging behavior is already covered in another test case, so it's ideal not to rely on behavior that could
-		// cause orthogonal failures and to avoid duplicate testing.
-		t.ensureServiceImport(&clients[0], t.helloService.Name, fmt.Sprintf(
-			"the ServiceImport no longer exists after exporting on cluster %q", clients[1].name))
+			t.deleteServiceExport(&clients[0])
 
-		t.deleteServiceExport(&clients[0])
+			t.ensureServiceImport(&clients[0], t.helloService.Name, fmt.Sprintf(
+				"the ServiceImport no longer exists after unexporting the service on cluster %q while still exported on cluster %q",
+				clients[0].name, clients[1].name))
 
-		t.ensureServiceImport(&clients[0], t.helloService.Name, fmt.Sprintf(
-			"the ServiceImport no longer exists after unexporting the service on cluster %q while still exported on cluster %q",
-			clients[0].name, clients[1].name))
+			t.deleteServiceExport(&clients[1])
 
-		t.deleteServiceExport(&clients[1])
-
-		t.awaitNoServiceImport(&clients[0], helloServiceName,
-			"the ServiceImport still exists after unexporting the service on all clusters")
-	})
+			t.awaitNoServiceImport(&clients[0], helloServiceName,
+				"the ServiceImport still exists after unexporting the service on all clusters")
+		})
 
 	Context("", func() {
 		BeforeEach(func() {
@@ -97,10 +97,9 @@ func testGeneralServiceImport() {
 			helloServiceExport.Spec.ExportedLabels = map[string]string{"dummy-label": "true"}
 		})
 
-		Specify("Only labels and annotations specified as exported in the ServiceExport should be propagated to the ServiceImport",
+		SpecifyWithSpecRef("Only labels and annotations specified as exported in the ServiceExport should be propagated to the ServiceImport",
+			"https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#labels-and-annotations",
 			Label(OptionalLabel), Label(ExportedLabelsLabel), func() {
-				AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#labels-and-annotations")
-
 				t.awaitServiceImport(&clients[0], helloServiceName, false,
 					func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
 						assertHasKeyValues(g, serviceImport.Annotations, helloServiceExport.Annotations)
@@ -124,10 +123,9 @@ func testGeneralServiceImport() {
 				tt.helloServiceExport2.Spec.ExportedLabels = map[string]string{"dummy-label2": "true"}
 			})
 
-			Specify("should apply the conflict resolution policy and report a Conflict condition on each ServiceExport",
+			SpecifyWithSpecRef("should apply the conflict resolution policy and report a Conflict condition on each ServiceExport",
+				"https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#labels-and-annotations",
 				Label(OptionalLabel), Label(ExportedLabelsLabel), func() {
-					AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#labels-and-annotations")
-
 					t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
 					t.awaitServiceExportCondition(&clients[1], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
 
@@ -147,31 +145,30 @@ func testGeneralServiceImport() {
 func testClusterIPServiceImport() {
 	t := newTestDriver()
 
-	Specify("Exporting a ClusterIP service should create a ServiceImport of type ClusterSetIP in the service's namespace in each cluster. "+
-		"Unexporting should delete the ServiceImport", Label(RequiredLabel), func() {
-		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#importing-services")
-
-		t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConditionValid, metav1.ConditionTrue)
-
-		for i := range clients {
-			serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, true, nil)
-
-			Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.ClusterSetIP), reportNonConformant(
-				fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
-		}
-
-		t.deleteServiceExport(&clients[0])
-
-		for i := range clients {
-			t.awaitNoServiceImport(&clients[i], helloServiceName, fmt.Sprintf(
-				"the ServiceImport still exists on cluster %q after unexporting the service", clients[i].name))
-		}
-	})
-
-	Specify("The SessionAffinity for a ClusterSetIP ServiceImport should match the exported service's SessionAffinity",
+	SpecifyWithSpecRef("Exporting a ClusterIP service should create a ServiceImport of type ClusterSetIP in the service's namespace in each cluster. "+
+		"Unexporting should delete the ServiceImport",
+		"https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#importing-services",
 		Label(RequiredLabel), func() {
-			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#session-affinity")
+			t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConditionValid, metav1.ConditionTrue)
 
+			for i := range clients {
+				serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, true, nil)
+
+				Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.ClusterSetIP), reportNonConformant(
+					fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
+			}
+
+			t.deleteServiceExport(&clients[0])
+
+			for i := range clients {
+				t.awaitNoServiceImport(&clients[i], helloServiceName, fmt.Sprintf(
+					"the ServiceImport still exists on cluster %q after unexporting the service", clients[i].name))
+			}
+		})
+
+	SpecifyWithSpecRef("The SessionAffinity for a ClusterSetIP ServiceImport should match the exported service's SessionAffinity",
+		"https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#session-affinity",
+		Label(RequiredLabel), func() {
 			t.awaitServiceImport(&clients[0], helloServiceName, false, func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
 				g.Expect(serviceImport.Spec.SessionAffinity).To(Equal(t.helloService.Spec.SessionAffinity), reportNonConformant(""))
 
@@ -184,10 +181,9 @@ func testClusterIPServiceImport() {
 		BeforeEach(func() {
 			t.helloService.Spec.InternalTrafficPolicy = ptr.To(corev1.ServiceInternalTrafficPolicyCluster)
 		})
-		Specify("The InternalTrafficPolicy for a ClusterSetIP ServiceImport should match the exported service's InternalTrafficPolicy",
+		SpecifyWithSpecRef("The InternalTrafficPolicy for a ClusterSetIP ServiceImport should match the exported service's InternalTrafficPolicy",
+			"https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#internal-traffic-policy",
 			Label(RequiredLabel), func() {
-				AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#internal-traffic-policy")
-
 				t.awaitServiceImport(&clients[0], helloServiceName, false, func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
 					g.Expect(serviceImport.Spec.InternalTrafficPolicy).To(Equal(t.helloService.Spec.InternalTrafficPolicy), reportNonConformant(
 						"The InternalTrafficPolicy of the ServiceImport does not match the exported Service's InternalTrafficPolicy"))
@@ -200,10 +196,9 @@ func testClusterIPServiceImport() {
 		BeforeEach(func() {
 			t.helloService.Spec.TrafficDistribution = ptr.To(corev1.ServiceTrafficDistributionPreferClose)
 		})
-		Specify("The TrafficDistribution for a ClusterSetIP ServiceImport should match the exported service's TrafficDistribution",
+		SpecifyWithSpecRef("The TrafficDistribution for a ClusterSetIP ServiceImport should match the exported service's TrafficDistribution",
+			"https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#traffic-distribution",
 			Label(RequiredLabel), func() {
-				AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#traffic-distribution")
-
 				t.awaitServiceImport(&clients[0], helloServiceName, false, func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
 					g.Expect(serviceImport.Spec.TrafficDistribution).To(Equal(t.helloService.Spec.TrafficDistribution), reportNonConformant(
 						"The TrafficDistribution of the ServiceImport does not match the exported Service's TrafficDistribution"))
@@ -212,25 +207,25 @@ func testClusterIPServiceImport() {
 		)
 	})
 
-	Specify("An IP should be allocated for a ClusterSetIP ServiceImport", Label(RequiredLabel), func() {
-		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#clustersetip")
+	SpecifyWithSpecRef("An IP should be allocated for a ClusterSetIP ServiceImport",
+		"https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#clustersetip",
+		Label(RequiredLabel), func() {
+			serviceImport := t.awaitServiceImport(&clients[0], t.helloService.Name, false,
+				func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
+					g.Expect(serviceImport.Spec.IPs).ToNot(BeEmpty(), reportNonConformant(""))
+				})
 
-		serviceImport := t.awaitServiceImport(&clients[0], t.helloService.Name, false,
-			func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
-				g.Expect(serviceImport.Spec.IPs).ToNot(BeEmpty(), reportNonConformant(""))
-			})
-
-		Expect(net.ParseIP(serviceImport.Spec.IPs[0])).ToNot(BeNil(),
-			reportNonConformant(fmt.Sprintf("The value %q is not a valid IP", serviceImport.Spec.IPs[0])))
-	})
-
-	Specify("The ports for a ClusterSetIP ServiceImport should match those of the exported service", Label(RequiredLabel), func() {
-		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-port")
-
-		t.awaitServiceImport(&clients[0], helloServiceName, false, func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
-			g.Expect(sortMCSPorts(serviceImport.Spec.Ports)).To(Equal(toMCSPorts(t.helloService.Spec.Ports)), reportNonConformant(""))
+			Expect(net.ParseIP(serviceImport.Spec.IPs[0])).ToNot(BeNil(),
+				reportNonConformant(fmt.Sprintf("The value %q is not a valid IP", serviceImport.Spec.IPs[0])))
 		})
-	})
+
+	SpecifyWithSpecRef("The ports for a ClusterSetIP ServiceImport should match those of the exported service",
+		"https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-port",
+		Label(RequiredLabel), func() {
+			t.awaitServiceImport(&clients[0], helloServiceName, false, func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
+				g.Expect(sortMCSPorts(serviceImport.Spec.Ports)).To(Equal(toMCSPorts(t.helloService.Spec.Ports)), reportNonConformant(""))
+			})
+		})
 
 	Context("A ClusterIP service exported on two clusters", func() {
 		tt := newTwoClusterTestDriver(t)
@@ -247,18 +242,18 @@ func testClusterIPServiceImport() {
 				}
 			})
 
-			Specify("should expose the union of the constituent service ports and raise a conflict", Label(RequiredLabel), func() {
-				AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-port")
+			SpecifyWithSpecRef("should expose the union of the constituent service ports and raise a conflict",
+				"https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-port",
+				Label(RequiredLabel), func() {
+					t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
+					t.awaitServiceExportCondition(&clients[1], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
 
-				t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
-				t.awaitServiceExportCondition(&clients[1], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
-
-				t.awaitServiceImport(&clients[0], t.helloService.Name, false,
-					func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
-						g.Expect(sortMCSPorts(serviceImport.Spec.Ports)).To(Equal(toMCSPorts(
-							append(t.helloService.Spec.Ports, tt.helloService2.Spec.Ports[1]))), reportNonConformant(""))
-					})
-			})
+					t.awaitServiceImport(&clients[0], t.helloService.Name, false,
+						func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
+							g.Expect(sortMCSPorts(serviceImport.Spec.Ports)).To(Equal(toMCSPorts(
+								append(t.helloService.Spec.Ports, tt.helloService2.Spec.Ports[1]))), reportNonConformant(""))
+						})
+				})
 		})
 
 		Context("with conflicting ports", Label(RequiredLabel), func() {
@@ -267,18 +262,18 @@ func testClusterIPServiceImport() {
 				tt.helloService2.Spec.Ports[0].Port = t.helloService.Spec.Ports[0].Port + 1
 			})
 
-			Specify("should apply the conflict resolution policy and report a Conflict condition on each ServiceExport", func() {
-				AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-port")
+			SpecifyWithSpecRef("should apply the conflict resolution policy and report a Conflict condition on each ServiceExport",
+				"https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-port",
+				func() {
+					t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
+					t.awaitServiceExportCondition(&clients[1], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
 
-				t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
-				t.awaitServiceExportCondition(&clients[1], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
-
-				t.awaitServiceImport(&clients[0], t.helloService.Name, false,
-					func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
-						g.Expect(sortMCSPorts(serviceImport.Spec.Ports)).To(Equal(toMCSPorts(t.helloService.Spec.Ports)),
-							reportNonConformant("The service ports were not resolved correctly"))
-					})
-			})
+					t.awaitServiceImport(&clients[0], t.helloService.Name, false,
+						func(g Gomega, serviceImport *v1alpha1.ServiceImport) {
+							g.Expect(sortMCSPorts(serviceImport.Spec.Ports)).To(Equal(toMCSPorts(t.helloService.Spec.Ports)),
+								reportNonConformant("The service ports were not resolved correctly"))
+						})
+				})
 		})
 	})
 }
@@ -290,34 +285,34 @@ func testHeadlessServiceImport() {
 		t.helloService.Spec.ClusterIP = corev1.ClusterIPNone
 	})
 
-	Specify("Exporting a headless service should create a ServiceImport of type Headless in the service's namespace in each cluster. "+
-		"Unexporting should delete the ServiceImport", Label(RequiredLabel), func() {
-		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-types")
+	SpecifyWithSpecRef("Exporting a headless service should create a ServiceImport of type Headless in the service's namespace in each cluster. "+
+		"Unexporting should delete the ServiceImport",
+		"https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-types",
+		Label(RequiredLabel), func() {
+			for i := range clients {
+				serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, true, nil)
 
-		for i := range clients {
-			serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, true, nil)
+				Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.Headless), reportNonConformant(
+					fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
+			}
 
-			Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.Headless), reportNonConformant(
-				fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
-		}
+			t.deleteServiceExport(&clients[0])
 
-		t.deleteServiceExport(&clients[0])
+			for i := range clients {
+				t.awaitNoServiceImport(&clients[i], helloServiceName, fmt.Sprintf(
+					"the ServiceImport still exists on cluster %q after unexporting the service", clients[i].name))
+			}
+		})
 
-		for i := range clients {
-			t.awaitNoServiceImport(&clients[i], helloServiceName, fmt.Sprintf(
-				"the ServiceImport still exists on cluster %q after unexporting the service", clients[i].name))
-		}
-	})
+	SpecifyWithSpecRef("No clusterset IP should be allocated for a Headless ServiceImport",
+		"https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#clustersetip",
+		Label(RequiredLabel), func() {
+			t.awaitServiceImport(&clients[0], t.helloService.Name, false, nil)
 
-	Specify("No clusterset IP should be allocated for a Headless ServiceImport", Label(RequiredLabel), func() {
-		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#clustersetip")
-
-		t.awaitServiceImport(&clients[0], t.helloService.Name, false, nil)
-
-		Consistently(func() []string {
-			return t.getServiceImport(&clients[0], t.helloService.Name).Spec.IPs
-		}).Within(5*time.Second).ProbeEvery(time.Second).Should(BeEmpty(), reportNonConformant(""))
-	})
+			Consistently(func() []string {
+				return t.getServiceImport(&clients[0], t.helloService.Name).Spec.IPs
+			}).Within(5*time.Second).ProbeEvery(time.Second).Should(BeEmpty(), reportNonConformant(""))
+		})
 }
 
 func testExternalNameService() {
@@ -328,13 +323,13 @@ func testExternalNameService() {
 		t.helloService.Spec.ExternalName = "example.com"
 	})
 
-	Specify("Exporting an ExternalName service should set ServiceExport Valid condition to False", Label(RequiredLabel), func() {
-		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/blob/master/keps/sig-multicluster/1645-multi-cluster-services-api/README.md#service-types")
-
-		t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConditionValid, metav1.ConditionFalse)
-		t.ensureNoServiceImport(&clients[0], helloServiceName,
-			"the ServiceImport should not exist for an ExternalName service")
-	})
+	SpecifyWithSpecRef("Exporting an ExternalName service should set ServiceExport Valid condition to False",
+		"https://github.com/kubernetes/enhancements/blob/master/keps/sig-multicluster/1645-multi-cluster-services-api/README.md#service-types",
+		Label(RequiredLabel), func() {
+			t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConditionValid, metav1.ConditionFalse)
+			t.ensureNoServiceImport(&clients[0], helloServiceName,
+				"the ServiceImport should not exist for an ExternalName service")
+		})
 }
 
 func testServiceTypeConflict() {
@@ -344,18 +339,18 @@ func testServiceTypeConflict() {
 		t.helloService2.Spec.ClusterIP = corev1.ClusterIPNone
 	})
 
-	Specify("A service exported on two clusters with conflicting headlessness should apply the conflict resolution policy and "+
-		"report a Conflict condition on the ServiceExport", Label(RequiredLabel), func() {
-		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#headlessness")
+	SpecifyWithSpecRef("A service exported on two clusters with conflicting headlessness should apply the conflict resolution policy and "+
+		"report a Conflict condition on the ServiceExport",
+		"https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#headlessness",
+		Label(RequiredLabel), func() {
+			t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
+			t.awaitServiceExportCondition(&clients[1], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
 
-		t.awaitServiceExportCondition(&clients[0], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
-		t.awaitServiceExportCondition(&clients[1], v1alpha1.ServiceExportConditionConflict, metav1.ConditionTrue)
+			for i := range clients {
+				serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, true, nil)
 
-		for i := range clients {
-			serviceImport := t.awaitServiceImport(&clients[i], helloServiceName, true, nil)
-
-			Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.ClusterSetIP), reportNonConformant(
-				fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
-		}
-	})
+				Expect(serviceImport.Spec.Type).To(Equal(v1alpha1.ClusterSetIP), reportNonConformant(
+					fmt.Sprintf("ServiceImport on cluster %q has type %q", clients[i].name, serviceImport.Spec.Type)))
+			}
+		})
 }

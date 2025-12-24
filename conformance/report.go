@@ -59,7 +59,9 @@ var reportHTML string
 type testInfo struct {
 	Desc       string
 	Ref        string
+	Labels     []string
 	Failed     bool
+	Skipped    bool
 	Conformant bool
 	Message    string
 }
@@ -76,7 +78,27 @@ var (
 	// successive retries, so we want to just report the last one. This also allows the last message to be cleared
 	// (via cancelNonConformanceReport()) if it eventually succeeded.
 	currentSpecNonConformanceMsg atomic.Value
+
+	// specRefRegistry maps test description substrings to the KEP spec reference
+	specRefRegistry = map[string]string{}
 )
+
+// SpecifyWithSpecRef exist to be able to register a spec to the KEP alongside
+// a Specify. This is important to be able to correctly attach this spec ref
+// even if a test is skipped
+func SpecifyWithSpecRef(text string, specRef string, args ...interface{}) bool {
+	specRefRegistry[text] = specRef
+	return Specify(text, args...)
+}
+
+func lookupSpecRef(fullText string) string {
+	for desc, ref := range specRefRegistry {
+		if strings.Contains(fullText, desc) {
+			return ref
+		}
+	}
+	return ""
+}
 
 func init() {
 	dummyErr := errors.New("dummy")
@@ -98,8 +120,12 @@ func init() {
 		firstLine((&matchers.SucceedMatcher{}).FailureMessage(dummyErr))))
 }
 
-var _ = ReportBeforeEach(func(_ SpecReport) {
+var _ = ReportBeforeEach(func(specReport SpecReport) {
 	cancelNonConformanceReport()
+
+	if ref := lookupSpecRef(specReport.FullText()); ref != "" {
+		AddReportEntry(SpecRefReportEntry, ref)
+	}
 })
 
 var _ = ReportAfterEach(func(specReport SpecReport) {
@@ -124,8 +150,7 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 			continue
 		}
 
-		if specReport.LeafNodeType != types.NodeTypeIt || specReport.State == types.SpecStatePending ||
-			specReport.State == types.SpecStateSkipped {
+		if specReport.LeafNodeType != types.NodeTypeIt || specReport.State == types.SpecStatePending {
 			continue
 		}
 
@@ -145,6 +170,13 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 				Conformant: true,
 			}
 
+			for _, currLabel := range specReport.Labels() {
+				if currLabel != label {
+					info.Labels = append(info.Labels, currLabel)
+				}
+			}
+			slices.Sort(info.Labels)
+
 			for i := range specReport.ReportEntries {
 				switch specReport.ReportEntries[i].Name {
 				case SpecRefReportEntry:
@@ -159,10 +191,13 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 				}
 			}
 
-			// If the spec failed (ie didn't pass) not due to non-conformance then we assume it encountered
-			// an unexpected error preventing conformance from being determined, and thus we'll report the
-			// conformance status as unknown.
-			if specReport.State != types.SpecStatePassed && info.Conformant {
+			if specReport.State == types.SpecStateSkipped {
+				info.Skipped = true
+				info.Message = parseFailureMessage(specReport.FailureMessage())
+			} else if specReport.State != types.SpecStatePassed && info.Conformant {
+				// If the spec failed (ie didn't pass) not due to non-conformance then we assume it encountered
+				// an unexpected error preventing conformance from being determined, and thus we'll report the
+				// conformance status as unknown.
 				info.Failed = true
 				info.Message = parseFailureMessage(specReport.FailureMessage())
 			}
@@ -178,6 +213,12 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 	testGroups := []testGrouping{}
 	for _, l := range reportingLabels {
 		if testGroupMap[l] != nil {
+			slices.SortFunc(testGroupMap[l].Tests, func(a, b testInfo) int {
+				if cmp := slices.Compare(a.Labels, b.Labels); cmp != 0 {
+					return cmp
+				}
+				return strings.Compare(strings.TrimSpace(a.Desc), strings.TrimSpace(b.Desc))
+			})
 			testGroups = append(testGroups, *testGroupMap[l])
 		}
 	}
