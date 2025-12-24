@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/mcs-api/controllers"
-	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	"sigs.k8s.io/mcs-api/pkg/apis/v1beta1"
 )
 
 var (
@@ -38,7 +38,7 @@ var (
 
 func init() {
 	clientgoscheme.AddToScheme(scheme)
-	v1alpha1.AddToScheme(scheme)
+	v1beta1.AddToScheme(scheme)
 }
 
 func main() {
