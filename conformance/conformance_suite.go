@@ -345,6 +345,39 @@ func (t *testDriver) awaitCmdOutputMatches(c *clusterClients, command []string, 
 	}).Within(time.Duration(20*int64(nIter))*time.Second).ProbeEvery(time.Second).MustPassRepeatedly(nIter).Should(Succeed(), msg)
 }
 
+func (t *testDriver) awaitServicePodIP(c *clusterClients) string {
+	By(fmt.Sprintf("Awaiting service deployment pod IP on cluster %q", c.name))
+
+	servicePodIP := ""
+
+	Eventually(func(g Gomega) {
+		pods, err := c.k8s.CoreV1().Pods(t.namespace).List(context.TODO(), metav1.ListOptions{
+			LabelSelector: metav1.FormatLabelSelector(newHelloDeployment().Spec.Selector),
+		})
+
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(pods.Items).NotTo(BeEmpty())
+
+		servicePodIP = pods.Items[0].Status.PodIP
+		g.Expect(servicePodIP).NotTo(BeEmpty(), "Service deployment pod was not allocated an IP")
+	}).Within(20 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
+
+	By(fmt.Sprintf("Retrieved service deployment pod IP %q", servicePodIP))
+
+	return servicePodIP
+}
+
+func (t *testDriver) execPortConnectivityCommand(port int, matchStr string, nIter int) {
+	command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local %d",
+		t.helloService.Name, t.namespace, port)}
+
+	for _, client := range clients {
+		By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), client.name))
+
+		t.awaitCmdOutputMatches(&client, command, matchStr, nIter, reportNonConformant(""))
+	}
+}
+
 type twoClusterTestDriver struct {
 	*testDriver
 	helloService2       *corev1.Service

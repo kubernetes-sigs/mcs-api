@@ -17,13 +17,12 @@ limitations under the License.
 package conformance
 
 import (
-	"context"
 	"fmt"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 var _ = Describe("", func() {
@@ -61,15 +60,7 @@ var _ = Describe("", func() {
 				t.createServiceExport(&clients[0], newHelloServiceExport())
 			})
 			By("Issuing a request from all clusters", func() {
-				// Run on all clusters
-				command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42",
-					t.helloService.Name, t.namespace)}
-
-				for _, client := range clients {
-					By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), client.name))
-
-					t.awaitCmdOutputMatches(&client, command, "pod ip", 1, reportNonConformant(""))
-				}
+				t.execPortConnectivityCommand(42, "pod ip", 1)
 			})
 		})
 	})
@@ -90,33 +81,47 @@ var _ = Describe("", func() {
 
 			t.createServiceExport(&clients[0], newHelloServiceExport())
 
-			By(fmt.Sprintf("Awaiting service deployment pod IP on cluster %q", clients[0].name))
+			servicePodIP := t.awaitServicePodIP(&clients[0])
 
-			servicePodIP := ""
+			t.execPortConnectivityCommand(42, servicePodIP, 10)
+		})
+	})
 
-			Eventually(func() string {
-				pods, err := clients[0].k8s.CoreV1().Pods(t.namespace).List(context.TODO(), metav1.ListOptions{
-					LabelSelector: metav1.FormatLabelSelector(newHelloDeployment().Spec.Selector),
-				})
-				Expect(err).ToNot(HaveOccurred())
+	Context("Connectivity to exported services with same port name but different port numbers on each cluster", func() {
+		tt := newTwoClusterTestDriver(t)
 
-				if len(pods.Items) > 0 {
-					servicePodIP = pods.Items[0].Status.PodIP
-				}
-
-				return servicePodIP
-			}, 20, 1).ShouldNot(BeEmpty(), "Service deployment pod was not allocated an IP")
-
-			By(fmt.Sprintf("Retrieved service deployment pod IP %q", servicePodIP))
-
-			command := []string{"sh", "-c", fmt.Sprintf("echo hi | nc %s.%s.svc.clusterset.local 42",
-				t.helloService.Name, t.namespace)}
-
-			for _, client := range clients {
-				By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), client.name))
-
-				t.awaitCmdOutputMatches(&client, command, servicePodIP, 10, reportNonConformant(""))
+		BeforeEach(func() {
+			tt.helloService2.Spec.Ports = []corev1.ServicePort{
+				{Name: "tcp", Port: 4242, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(42)},
 			}
+		})
+
+		It("should only route traffic to the cluster that exposes the port", Label(OptionalLabel, ConnectivityLabel, ClusterIPLabel, StrictPortConflictLabel), func() {
+			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-port")
+
+			servicePodIP := t.awaitServicePodIP(&clients[0])
+
+			t.execPortConnectivityCommand(42, servicePodIP, 10)
+		})
+	})
+
+	Context("Connectivity to exported services with different port name on each cluster", func() {
+		tt := newTwoClusterTestDriver(t)
+
+		BeforeEach(func() {
+			tt.helloService2.Spec.Ports = []corev1.ServicePort{
+				{Name: "tcp2", Port: 4242, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt32(42)},
+			}
+		})
+
+		It("should route traffic to each port only to the cluster that exposes it", Label(OptionalLabel, ConnectivityLabel, ClusterIPLabel, StrictPortConflictLabel), func() {
+			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#service-port")
+
+			cluster1PodIP := t.awaitServicePodIP(&clients[0])
+			cluster2PodIP := t.awaitServicePodIP(&clients[1])
+
+			t.execPortConnectivityCommand(42, cluster1PodIP, 10)
+			t.execPortConnectivityCommand(4242, cluster2PodIP, 10)
 		})
 	})
 })
