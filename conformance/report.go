@@ -205,6 +205,9 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 	testGroups := []testGrouping{}
 	for _, l := range reportingLabels {
 		if testGroupMap[l] != nil {
+			slices.SortFunc(testGroupMap[l].Tests, func(a, b testInfo) int {
+				return strings.Compare(strings.TrimSpace(a.Desc), strings.TrimSpace(b.Desc))
+			})
 			testGroups = append(testGroups, *testGroupMap[l])
 		}
 	}
