@@ -34,47 +34,47 @@ const K8sEndpointSliceManagedByName = "endpointslice-controller.k8s.io"
 var _ = Describe("", Label(OptionalLabel, EndpointSliceLabel), func() {
 	t := newTestDriver()
 
-	Specify("Exporting a service should create an MCS EndpointSlice in the service's namespace in each cluster with the "+
-		"required MCS labels. Unexporting should delete the EndpointSlice.", func() {
-		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#using-endpointslice-objects-to-track-endpoints")
+	SpecifyWithSpecRef("Exporting a service should create an MCS EndpointSlice in the service's namespace in each cluster with the "+
+		"required MCS labels. Unexporting should delete the EndpointSlice.",
+		"https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#using-endpointslice-objects-to-track-endpoints",
+		func() {
+			endpointSlices := make([]*discoveryv1.EndpointSlice, len(clients))
 
-		endpointSlices := make([]*discoveryv1.EndpointSlice, len(clients))
+			for i, client := range clients {
+				eps := t.awaitMCSEndpointSlice(&client, discoveryv1.AddressTypeIPv4, nil, reportNonConformant(fmt.Sprintf(
+					"an MCS EndpointSlice was not found on cluster %q. An MCS EndpointSlice is identified by the presence "+
+						"of the required MCS labels (%q and %q). "+
+						"If the MCS implementation does not use MCS EndpointSlices, you can specify a Ginkgo label filter using "+
+						"the %q label where appropriate to skip this test.",
+					client.name, v1alpha1.LabelServiceName, v1alpha1.LabelSourceCluster, EndpointSliceLabel)))
 
-		for i, client := range clients {
-			eps := t.awaitMCSEndpointSlice(&client, discoveryv1.AddressTypeIPv4, nil, reportNonConformant(fmt.Sprintf(
-				"an MCS EndpointSlice was not found on cluster %q. An MCS EndpointSlice is identified by the presence "+
-					"of the required MCS labels (%q and %q). "+
-					"If the MCS implementation does not use MCS EndpointSlices, you can specify a Ginkgo label filter using "+
-					"the %q label where appropriate to skip this test.",
-				client.name, v1alpha1.LabelServiceName, v1alpha1.LabelSourceCluster, EndpointSliceLabel)))
+				endpointSlices[i] = eps
 
-			endpointSlices[i] = eps
+				Expect(eps.Labels).To(HaveKeyWithValue(v1alpha1.LabelServiceName, t.helloService.Name),
+					reportNonConformant(fmt.Sprintf("the MCS EndpointSlice %q does not contain the %q label referencing the service name",
+						eps.Name, v1alpha1.LabelServiceName)))
 
-			Expect(eps.Labels).To(HaveKeyWithValue(v1alpha1.LabelServiceName, t.helloService.Name),
-				reportNonConformant(fmt.Sprintf("the MCS EndpointSlice %q does not contain the %q label referencing the service name",
-					eps.Name, v1alpha1.LabelServiceName)))
+				Expect(eps.Labels).To(HaveKey(discoveryv1.LabelManagedBy),
+					reportNonConformant(fmt.Sprintf("the MCS EndpointSlice %q does not contain the %q label",
+						eps.Name, discoveryv1.LabelManagedBy)))
 
-			Expect(eps.Labels).To(HaveKey(discoveryv1.LabelManagedBy),
-				reportNonConformant(fmt.Sprintf("the MCS EndpointSlice %q does not contain the %q label",
-					eps.Name, discoveryv1.LabelManagedBy)))
-
-			if !skipVerifyEndpointSliceManagedBy {
-				Expect(eps.Labels[discoveryv1.LabelManagedBy]).ToNot(Equal(K8sEndpointSliceManagedByName),
-					reportNonConformant(fmt.Sprintf("the MCS EndpointSlice's %q label must not reference %q",
-						discoveryv1.LabelManagedBy, K8sEndpointSliceManagedByName)))
+				if !skipVerifyEndpointSliceManagedBy {
+					Expect(eps.Labels[discoveryv1.LabelManagedBy]).ToNot(Equal(K8sEndpointSliceManagedByName),
+						reportNonConformant(fmt.Sprintf("the MCS EndpointSlice's %q label must not reference %q",
+							discoveryv1.LabelManagedBy, K8sEndpointSliceManagedByName)))
+				}
 			}
-		}
 
-		t.deleteServiceExport(&clients[0])
+			t.deleteServiceExport(&clients[0])
 
-		for i, client := range clients {
-			Eventually(func() bool {
-				_, err := client.k8s.DiscoveryV1().EndpointSlices(t.namespace).Get(ctx, endpointSlices[i].Name, metav1.GetOptions{})
-				return apierrors.IsNotFound(err)
-			}, 20*time.Second, 100*time.Millisecond).Should(BeTrue(),
-				reportNonConformant(fmt.Sprintf("the EndpointSlice was not deleted on unexport from cluster %d", i+1)))
-		}
-	})
+			for i, client := range clients {
+				Eventually(func() bool {
+					_, err := client.k8s.DiscoveryV1().EndpointSlices(t.namespace).Get(ctx, endpointSlices[i].Name, metav1.GetOptions{})
+					return apierrors.IsNotFound(err)
+				}, 20*time.Second, 100*time.Millisecond).Should(BeTrue(),
+					reportNonConformant(fmt.Sprintf("the EndpointSlice was not deleted on unexport from cluster %d", i+1)))
+			}
+		})
 })
 
 func (t *testDriver) awaitMCSEndpointSlice(c *clusterClients, addressType discoveryv1.AddressType,
