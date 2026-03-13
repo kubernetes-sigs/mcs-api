@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/kind/pkg/cluster"
-	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	"sigs.k8s.io/mcs-api/pkg/apis/v1beta1"
 )
 
 const (
@@ -66,7 +66,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).ToNot(HaveOccurred())
 	scheme := runtime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
-	Expect(v1alpha1.AddToScheme(scheme)).To(Succeed())
+	Expect(v1beta1.AddToScheme(scheme)).To(Succeed())
 	Expect(err).ToNot(HaveOccurred())
 	existingCluster := true
 	env = &envtest.Environment{
