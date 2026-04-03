@@ -49,4 +49,5 @@ Session.vim
 .vscode
 /www/test_out
 report.html
+report.yaml
 .*.timestamp
