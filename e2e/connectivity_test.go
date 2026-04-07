@@ -27,7 +27,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/mcs-api/pkg/apis/v1alpha1"
+	"sigs.k8s.io/mcs-api/pkg/apis/v1beta1"
 )
 
 var (
@@ -54,13 +54,13 @@ var (
 			},
 		},
 	}
-	helloServiceImport = v1alpha1.ServiceImport{
+	helloServiceImport = v1beta1.ServiceImport{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "hello",
 		},
-		Spec: v1alpha1.ServiceImportSpec{
-			Type: v1alpha1.ClusterSetIP,
-			Ports: []v1alpha1.ServicePort{
+		Spec: v1beta1.ServiceImportSpec{
+			Type: v1beta1.ClusterSetIP,
+			Ports: []v1beta1.ServicePort{
 				{
 					Name:     "tcp",
 					Port:     42,
@@ -148,7 +148,7 @@ var _ = Describe("Connectivity", func() {
 		namespace string
 
 		ctx           = context.Background()
-		serviceImport *v1alpha1.ServiceImport
+		serviceImport *v1beta1.ServiceImport
 		podIPs        []string
 		reqPod        *v1.Pod
 
@@ -203,7 +203,7 @@ var _ = Describe("Connectivity", func() {
 		_, err = cluster2.k8s.CoreV1().Services(namespace).Create(ctx, &svc, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
 		imp := helloServiceImport
-		_, err = cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Create(ctx, &imp, metav1.CreateOptions{})
+		_, err = cluster1.mcs.MulticlusterV1beta1().ServiceImports(namespace).Create(ctx, &imp, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(func() string {
 			rp, err := cluster1.k8s.CoreV1().Pods(namespace).Get(ctx, requestPod.Name, metav1.GetOptions{})
@@ -231,11 +231,11 @@ var _ = Describe("Connectivity", func() {
 		exportService(ctx, cluster2, cluster1, namespace, svc.Name)
 
 		Eventually(func() []string {
-			svcImport, err := cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Get(ctx, helloServiceImport.Name, metav1.GetOptions{})
+			svcImport, err := cluster1.mcs.MulticlusterV1beta1().ServiceImports(namespace).Get(ctx, helloServiceImport.Name, metav1.GetOptions{})
 			Expect(err).ToNot(HaveOccurred())
 			return svcImport.Spec.IPs
 		}).ShouldNot(BeEmpty())
-		serviceImport, err = cluster1.mcs.MulticlusterV1alpha1().ServiceImports(namespace).Get(ctx, helloServiceImport.Name, metav1.GetOptions{})
+		serviceImport, err = cluster1.mcs.MulticlusterV1beta1().ServiceImports(namespace).Get(ctx, helloServiceImport.Name, metav1.GetOptions{})
 		Expect(err).ToNot(HaveOccurred())
 
 		reqPod, err = cluster1.k8s.CoreV1().Pods(namespace).Get(ctx, requestPod.Name, metav1.GetOptions{})
