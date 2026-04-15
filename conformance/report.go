@@ -73,6 +73,13 @@ type testGrouping struct {
 	Tests []testInfo
 }
 
+type implementationInfo struct {
+	Organization string
+	Project      string
+	Version      string
+	URL          string
+}
+
 var (
 	errorRegEx *regexp.Regexp
 	// currentSpecNonConformanceMsg holds the last non-conformance message emitted by the current spec. Using
@@ -239,17 +246,24 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 	}
 
 	data := struct {
-		Groups       []testGrouping
-		SuiteFailure string
-		DNSDomain    string
-		Passed       int
-		Total        int
+		Groups         []testGrouping
+		SuiteFailure   string
+		DNSDomain      string
+		Passed         int
+		Total          int
+		Implementation implementationInfo
 	}{
 		Groups:       testGroups,
 		SuiteFailure: suiteFailure,
 		DNSDomain:    dnsDomain,
 		Passed:       passedTests,
 		Total:        totalTests,
+		Implementation: implementationInfo{
+			Organization: organization,
+			Project:      project,
+			Version:      version,
+			URL:          url,
+		},
 	}
 
 	out, err := os.Create("report.html")

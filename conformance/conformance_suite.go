@@ -58,6 +58,10 @@ var (
 	loadingRules                     *clientcmd.ClientConfigLoadingRules
 	skipVerifyEndpointSliceManagedBy bool
 	dnsDomain                        string
+	organization                     string
+	project                          string
+	version                          string
+	url                              string
 	ctx                              = context.TODO()
 )
 
@@ -80,6 +84,10 @@ func init() {
 			discoveryv1.LabelManagedBy, K8sEndpointSliceManagedByName))
 	flag.StringVar(&dnsDomain, "dns-domain", "clusterset.local", "The DNS domain suffix used for multi-cluster services. "+
 		"The default is \"clusterset.local\" as specified by the MCS spec, but some implementations may use a custom domain.")
+	flag.StringVar(&organization, "organization", "", "Name of the organization responsible for the MCS implementation")
+	flag.StringVar(&project, "project", "", "Name of the MCS implementation project being tested")
+	flag.StringVar(&version, "version", "", "Version of the MCS implementation being tested")
+	flag.StringVar(&url, "url", "", "A URL pointing to the MCS implementation project or documentation")
 }
 
 var _ = BeforeSuite(func() {
