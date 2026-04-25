@@ -236,8 +236,19 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 
 	totalTests := 0
 	passedTests := 0
+	requiredTotal := 0
+	requiredPassed := 0
 	for _, g := range testGroups {
 		for _, t := range g.Tests {
+			// Track required tests. Implementation is conformant if all required tests pass.
+			if g.Name == RequiredLabel {
+				requiredTotal++
+				if t.Passed {
+					requiredPassed++
+				}
+			}
+
+			// Overall totals include both required and optional tests.
 			totalTests++
 			if t.Passed {
 				passedTests++
@@ -251,13 +262,17 @@ var _ = ReportAfterSuite("MCS conformance report", func(report Report) {
 		DNSDomain      string
 		Passed         int
 		Total          int
+		RequiredPassed int
+		RequiredTotal  int
 		Implementation implementationInfo
 	}{
-		Groups:       testGroups,
-		SuiteFailure: suiteFailure,
-		DNSDomain:    dnsDomain,
-		Passed:       passedTests,
-		Total:        totalTests,
+		Groups:         testGroups,
+		SuiteFailure:   suiteFailure,
+		DNSDomain:      dnsDomain,
+		Passed:         passedTests,
+		Total:          totalTests,
+		RequiredPassed: requiredPassed,
+		RequiredTotal:  requiredTotal,
 		Implementation: implementationInfo{
 			Organization: organization,
 			Project:      project,
