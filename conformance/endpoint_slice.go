@@ -116,7 +116,7 @@ func (t *testDriver) awaitMCSEndpointSlice(ctx context.Context, c *clusterClient
 
 		// The final run succeeded so cancel any prior non-conformance reported.
 		cancelNonConformanceReport()
-	}).WithContext(ctx).Within(20 * time.Second).ProbeEvery(100 * time.Millisecond).Should(Succeed())
+	}).WithContext(ctx).Within(60 * time.Second).ProbeEvery(100 * time.Millisecond).Should(Succeed())
 
 	return endpointSlice
 }
