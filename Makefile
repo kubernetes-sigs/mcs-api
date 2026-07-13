@@ -99,3 +99,8 @@ docker-push: docker-build
 # Run against the configured Kubernetes cluster in ~/.kube/config
 run: generate fmt vet manifests
 	go run ./cmd/servicecontroller/servicecontroller.go
+
+# Bump submodules
+.PHONY: bump-submodules
+bump-submodules:
+	for sub in conformance controllers e2e; do go -C $$sub get sigs.k8s.io/mcs-api && go -C $$sub mod tidy; done
