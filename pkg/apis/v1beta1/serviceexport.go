@@ -34,7 +34,7 @@ var ServiceExportVersionedName = ServiceExportKindName + "/" + GroupVersion.Vers
 
 // +genclient
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName={svcex,svcexport}
+// +kubebuilder:resource:shortName={svcex,svcexport},categories=multicluster
 // +kubebuilder:storageversion
 
 // ServiceExport declares that the Service with the same name and namespace

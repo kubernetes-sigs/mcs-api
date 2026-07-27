@@ -35,7 +35,7 @@ var ServiceImportVersionedName = ServiceImportKindName + "/" + GroupVersion.Vers
 
 // +genclient
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:shortName={svcim,svcimport}
+// +kubebuilder:resource:shortName={svcim,svcimport},categories=multicluster
 
 // ServiceImport describes a service imported from clusters in a ClusterSet.
 type ServiceImport struct {
