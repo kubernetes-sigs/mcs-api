@@ -28,7 +28,7 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-func execCmd(k8s kubernetes.Interface, config *rest.Config, podName string, podNamespace string, command []string) ([]byte, []byte, error) {
+func execCmd(ctx context.Context, k8s kubernetes.Interface, config *rest.Config, podName string, podNamespace string, command []string) ([]byte, []byte, error) {
 	req := k8s.CoreV1().RESTClient().Post().Resource("pods").Name(podName).Namespace(podNamespace).SubResource("exec")
 	req.VersionedParams(&v1.PodExecOptions{
 		Command: command,
@@ -45,10 +45,10 @@ func execCmd(k8s kubernetes.Interface, config *rest.Config, podName string, podN
 
 	var stdout, stderr bytes.Buffer
 
-	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	execCtx, cancel := context.WithTimeout(ctx, 4*time.Second)
 	defer cancel()
 
-	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
+	err = exec.StreamWithContext(execCtx, remotecommand.StreamOptions{
 		Stdin:  nil,
 		Stdout: &stdout,
 		Stderr: &stderr,

@@ -352,12 +352,12 @@ func (t *testDriver) startRequestPod(ctx context.Context, client clusterClients)
 	}, 60, 1).Should(Succeed())
 }
 
-func (t *testDriver) execCmdOnRequestPod(c *clusterClients, command []string) string {
-	stdout, _, _ := execCmd(c.k8s, c.rest, t.requestPod.Name, t.namespace, command)
+func (t *testDriver) execCmdOnRequestPod(ctx context.Context, c *clusterClients, command []string) string {
+	stdout, _, _ := execCmd(ctx, c.k8s, c.rest, t.requestPod.Name, t.namespace, command)
 	return string(stdout)
 }
 
-func (t *testDriver) awaitCmdOutputMatches(c *clusterClients, command []string, expected any, nIter int, msg func() string) {
+func (t *testDriver) awaitCmdOutputMatches(ctx context.Context, c *clusterClients, command []string, expected any, nIter int, msg func() string) {
 	var matcher types.GomegaMatcher
 
 	switch v := expected.(type) {
@@ -367,10 +367,10 @@ func (t *testDriver) awaitCmdOutputMatches(c *clusterClients, command []string, 
 		matcher = v
 	}
 
-	Eventually(func(g Gomega) {
-		output := t.execCmdOnRequestPod(c, command)
+	Eventually(func(g Gomega, ctx context.Context) {
+		output := t.execCmdOnRequestPod(ctx, c, command)
 		g.Expect(output).To(matcher, "Command output")
-	}).Within(time.Duration(20*int64(nIter))*time.Second).ProbeEvery(time.Second).MustPassRepeatedly(nIter).Should(Succeed(), msg)
+	}).WithContext(ctx).Within(time.Duration(20*int64(nIter))*time.Second).ProbeEvery(time.Second).MustPassRepeatedly(nIter).Should(Succeed(), msg)
 }
 
 func (t *testDriver) awaitServicePodIP(ctx context.Context, c *clusterClients) string {
@@ -403,7 +403,7 @@ func (t *testDriver) execPortConnectivityCommand(ctx context.Context, port int, 
 
 			By(fmt.Sprintf("Executing %s command %q on cluster %q", ipFamily, strings.Join(command, " "), client.name))
 
-			t.awaitCmdOutputMatches(&client, command, matchStr, nIter, reportNonConformant(""))
+			t.awaitCmdOutputMatches(ctx, &client, command, matchStr, nIter, reportNonConformant(""))
 		}
 	}
 }

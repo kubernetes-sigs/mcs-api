@@ -34,7 +34,7 @@ var _ = Describe("", func() {
 	})
 
 	Context("Connectivity to a service that is not exported", func() {
-		It("should be inaccessible", Label(RequiredLabel), func() {
+		It("should be inaccessible", Label(RequiredLabel), func(ctx context.Context) {
 			AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#exporting-services")
 			By("attempting to access the remote service", func() {
 				By("issuing a request from all clusters", func() {
@@ -48,7 +48,7 @@ var _ = Describe("", func() {
 						for _, client := range clients {
 							// Repeat multiple times
 							for i := 0; i < 20; i++ {
-								Expect(t.execCmdOnRequestPod(&client, command)).NotTo(ContainSubstring("pod ip"), reportNonConformant(""))
+								Expect(t.execCmdOnRequestPod(ctx, &client, command)).NotTo(ContainSubstring("pod ip"), reportNonConformant(""))
 							}
 						}
 					}

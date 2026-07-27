@@ -64,7 +64,7 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, HeadlessLabel), func() {
 
 				By(fmt.Sprintf("Executing %s command %q on cluster %q", ipFamily, strings.Join(command, " "), client.name))
 
-				t.awaitCmdOutputMatches(&client, command, HaveAddresses(addresses), 1, reportNonConformant(""))
+				t.awaitCmdOutputMatches(ctx, &client, command, HaveAddresses(addresses), 1, reportNonConformant(""))
 			}
 		}
 	})
@@ -115,7 +115,7 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, HeadlessLabel), func() {
 
 						By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), client.name))
 
-						t.awaitCmdOutputMatches(&client, command, HaveAddresses(ep.Addresses), 1, reportNonConformant(""))
+						t.awaitCmdOutputMatches(ctx, &client, command, HaveAddresses(ep.Addresses), 1, reportNonConformant(""))
 					}
 				}
 			}
@@ -136,7 +136,7 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, HeadlessLabel), func() {
 		domainName := fmt.Sprintf("%s.%s.svc.%s", t.helloService.Name, t.namespace, dnsDomain)
 
 		for _, client := range clients {
-			srvRecs := t.expectSRVRecords(&client, domainName, len(allEndpoints))
+			srvRecs := t.expectSRVRecords(ctx, &client, domainName, len(allEndpoints))
 
 			// Verify each endpoint has a corresponding SRV record
 			for _, ep := range allEndpoints {
