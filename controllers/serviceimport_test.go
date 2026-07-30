@@ -36,7 +36,6 @@ var _ = Describe("ServiceImport", func() {
 		serviceName        types.NamespacedName
 		derivedServiceName types.NamespacedName
 	)
-	ctx := context.Background()
 	Context("should be ignored", func() {
 		Specify("when headless", func() {
 			Expect(shouldIgnoreImport(&v1beta1.ServiceImport{
@@ -69,7 +68,7 @@ var _ = Describe("ServiceImport", func() {
 		})
 	})
 	Context("created", func() {
-		BeforeEach(func() {
+		BeforeEach(func(ctx context.Context) {
 			serviceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("svc-%v", rand.Uint64())}
 			derivedServiceName = types.NamespacedName{Namespace: testNS, Name: derivedName(serviceName)}
 			serviceImport = v1beta1.ServiceImport{
@@ -86,46 +85,46 @@ var _ = Describe("ServiceImport", func() {
 			}
 			Expect(k8s.Create(ctx, &serviceImport)).To(Succeed())
 		})
-		It("has derived service annotation", func() {
-			Eventually(func() string {
+		It("has derived service annotation", func(ctx context.Context) {
+			Eventually(func(ctx context.Context) string {
 				var s v1beta1.ServiceImport
 				Expect(k8s.Get(ctx, serviceName, &s)).To(Succeed())
 				return s.Annotations[DerivedServiceAnnotation]
-			}, 10).Should(Equal(derivedName(serviceName)))
+			}, 10).WithContext(ctx).Should(Equal(derivedName(serviceName)))
 		}, 10)
-		It("has derived service IP", func() {
+		It("has derived service IP", func(ctx context.Context) {
 			var s v1beta1.ServiceImport
-			Eventually(func() string {
+			Eventually(func(ctx context.Context) string {
 				Expect(k8s.Get(ctx, serviceName, &s)).To(Succeed())
 				if len(s.Spec.IPs) > 0 {
 					return s.Spec.IPs[0]
 				}
 				return ""
-			}, 10).ShouldNot(BeEmpty())
+			}, 10).WithContext(ctx).ShouldNot(BeEmpty())
 		}, 15)
-		It("created derived service", func() {
+		It("created derived service", func(ctx context.Context) {
 			var s v1.Service
-			Eventually(func() error {
+			Eventually(func(ctx context.Context) error {
 				return k8s.Get(ctx, derivedServiceName, &s)
-			}, 10).Should(Succeed())
+			}, 10).WithContext(ctx).Should(Succeed())
 			Expect(len(s.OwnerReferences)).To(Equal(1))
 			Expect(s.OwnerReferences[0].UID).To(Equal(serviceImport.UID))
 		}, 15)
-		It("removes derived service", func() {
+		It("removes derived service", func(ctx context.Context) {
 			var s v1.Service
-			Eventually(func() error {
+			Eventually(func(ctx context.Context) error {
 				return k8s.Get(ctx, derivedServiceName, &s)
-			}, 10).Should(Succeed())
+			}, 10).WithContext(ctx).Should(Succeed())
 			var imp v1beta1.ServiceImport
 			Expect(k8s.Get(ctx, serviceName, &imp)).To(Succeed())
 			Expect(k8s.Delete(ctx, &imp)).To(Succeed())
-			Eventually(func() error {
+			Eventually(func(ctx context.Context) error {
 				return k8s.Get(ctx, derivedServiceName, &s)
-			}, 15).ShouldNot(Succeed())
+			}, 15).WithContext(ctx).ShouldNot(Succeed())
 		}, 15)
 	})
 	Context("created with IP", func() {
-		BeforeEach(func() {
+		BeforeEach(func(ctx context.Context) {
 			serviceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("svc-%v", rand.Uint64())}
 			derivedServiceName = types.NamespacedName{Namespace: testNS, Name: derivedName(serviceName)}
 			serviceImport = v1beta1.ServiceImport{
@@ -142,23 +141,23 @@ var _ = Describe("ServiceImport", func() {
 			}
 			Expect(k8s.Create(ctx, &serviceImport)).To(Succeed())
 		})
-		It("updates derived service IP", func() {
+		It("updates derived service IP", func(ctx context.Context) {
 			var svcImport v1beta1.ServiceImport
 			var s v1.Service
-			Eventually(func() error {
+			Eventually(func(ctx context.Context) error {
 				return k8s.Get(ctx, derivedServiceName, &s)
-			}, 10).Should(Succeed())
-			Eventually(func() string {
+			}, 10).WithContext(ctx).Should(Succeed())
+			Eventually(func(ctx context.Context) string {
 				Expect(k8s.Get(ctx, serviceName, &svcImport)).To(Succeed())
 				if len(svcImport.Spec.IPs) > 0 {
 					return svcImport.Spec.IPs[0]
 				}
 				return ""
-			}, 10).Should(Equal(s.Spec.ClusterIP))
+			}, 10).WithContext(ctx).Should(Equal(s.Spec.ClusterIP))
 		}, 15)
 	})
 	Context("created with existing clustersetIP", func() {
-		BeforeEach(func() {
+		BeforeEach(func(ctx context.Context) {
 			serviceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("svc-%v", rand.Uint64())}
 			derivedServiceName = types.NamespacedName{Namespace: testNS, Name: derivedName(serviceName)}
 			serviceImport = v1beta1.ServiceImport{
@@ -176,19 +175,19 @@ var _ = Describe("ServiceImport", func() {
 			}
 			Expect(k8s.Create(ctx, &serviceImport)).To(Succeed())
 		})
-		It("updates service loadbalancer status with service import IPs", func() {
+		It("updates service loadbalancer status with service import IPs", func(ctx context.Context) {
 			var svcImport v1beta1.ServiceImport
 			var s v1.Service
-			Eventually(func() error {
+			Eventually(func(ctx context.Context) error {
 				return k8s.Get(ctx, derivedServiceName, &s)
-			}, 10).Should(Succeed())
-			Eventually(func() string {
+			}, 10).WithContext(ctx).Should(Succeed())
+			Eventually(func(ctx context.Context) string {
 				Expect(k8s.Get(ctx, serviceName, &svcImport)).To(Succeed())
 				if len(svcImport.Spec.IPs) > 0 {
 					return svcImport.Spec.IPs[0]
 				}
 				return ""
-			}, 10).Should(Equal(s.Status.LoadBalancer.Ingress[0].IP))
+			}, 10).WithContext(ctx).Should(Equal(s.Status.LoadBalancer.Ingress[0].IP))
 		}, 15)
 	})
 })

@@ -31,7 +31,6 @@ import (
 )
 
 var _ = Describe("EndpointSlice", func() {
-	ctx := context.Background()
 	Context("should be ignored", func() {
 		Specify("when not multi-cluster", func() {
 			Expect(shouldIgnoreEndpointSlice(&discoveryv1.EndpointSlice{
@@ -60,7 +59,7 @@ var _ = Describe("EndpointSlice", func() {
 			sliceName          types.NamespacedName
 			epSlice            discoveryv1.EndpointSlice
 		)
-		BeforeEach(func() {
+		BeforeEach(func(ctx context.Context) {
 			serviceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("svc-%v", rand.Uint64())}
 			derivedServiceName = types.NamespacedName{Namespace: testNS, Name: derivedName(serviceName)}
 			sliceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("slice-%v", rand.Uint64())}
@@ -76,12 +75,12 @@ var _ = Describe("EndpointSlice", func() {
 			}
 			Expect(k8s.Create(ctx, &epSlice)).To(Succeed())
 		})
-		It("has correct label", func() {
-			Eventually(func() string {
+		It("has correct label", func(ctx context.Context) {
+			Eventually(func(ctx context.Context) string {
 				var eps discoveryv1.EndpointSlice
 				Expect(k8s.Get(ctx, sliceName, &eps)).Should(Succeed())
 				return eps.Labels[discoveryv1.LabelServiceName]
-			}).Should(Equal(derivedServiceName.Name))
+			}).WithContext(ctx).Should(Equal(derivedServiceName.Name))
 		})
 	})
 	Context("created with wrong label", func() {
@@ -91,7 +90,7 @@ var _ = Describe("EndpointSlice", func() {
 			sliceName          types.NamespacedName
 			epSlice            discoveryv1.EndpointSlice
 		)
-		BeforeEach(func() {
+		BeforeEach(func(ctx context.Context) {
 			serviceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("svc-%v", rand.Uint64())}
 			derivedServiceName = types.NamespacedName{Namespace: testNS, Name: derivedName(serviceName)}
 			sliceName = types.NamespacedName{Namespace: testNS, Name: fmt.Sprintf("slice-%v", rand.Uint64())}
@@ -108,12 +107,12 @@ var _ = Describe("EndpointSlice", func() {
 			}
 			Expect(k8s.Create(ctx, &epSlice)).To(Succeed())
 		})
-		It("has correct label", func() {
-			Eventually(func() string {
+		It("has correct label", func(ctx context.Context) {
+			Eventually(func(ctx context.Context) string {
 				var eps discoveryv1.EndpointSlice
 				Expect(k8s.Get(ctx, sliceName, &eps)).Should(Succeed())
 				return eps.Labels[discoveryv1.LabelServiceName]
-			}).Should(Equal(derivedServiceName.Name))
+			}).WithContext(ctx).Should(Equal(derivedServiceName.Name))
 		})
 	})
 })

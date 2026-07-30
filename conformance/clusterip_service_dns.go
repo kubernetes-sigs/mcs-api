@@ -53,13 +53,13 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, ClusterIPLabel), func() {
 				By(fmt.Sprintf("Executing %s command %q on cluster %q", ipFamilyOf(clusterSetIP),
 					strings.Join(command, " "), client.name))
 
-				t.awaitCmdOutputMatches(&client, command, clusterSetIP, 1, reportNonConformant(""))
+				t.awaitCmdOutputMatches(ctx, &client, command, clusterSetIP, 1, reportNonConformant(""))
 			}
 		}
 	})
 
 	Specify("A DNS SRV query of the <service>.<ns>.svc."+dnsDomain+" domain for a ClusterIP service should return valid SRV "+
-		"records", func() {
+		"records", func(ctx context.Context) {
 		AddReportEntry(SpecRefReportEntry, "https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api#dns")
 
 		domainName := fmt.Sprintf("%s.%s.svc.%s", t.helloService.Name, t.namespace, dnsDomain)
@@ -70,7 +70,7 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, ClusterIPLabel), func() {
 				domainName: domainName,
 			}}
 
-			srvRecs := t.expectSRVRecords(&client, domainName, len(expSRVRecs))
+			srvRecs := t.expectSRVRecords(ctx, &client, domainName, len(expSRVRecs))
 
 			Expect(srvRecs).To(Equal(expSRVRecs), reportNonConformant(
 				fmt.Sprintf("Received SRV records %v do not match the expected records %v", srvRecs, expSRVRecs)))
@@ -102,11 +102,11 @@ var _ = Describe("", Label(OptionalLabel, DNSLabel, ClusterIPLabel), func() {
 
 		By(fmt.Sprintf("Executing command %q on cluster %q", strings.Join(command, " "), clients[0].name))
 
-		t.awaitCmdOutputMatches(&clients[0], command, resolvedIP, 1, reportNonConformant(""))
+		t.awaitCmdOutputMatches(ctx, &clients[0], command, resolvedIP, 1, reportNonConformant(""))
 	})
 })
 
-func (t *testDriver) expectSRVRecords(c *clusterClients, domainName string, expectedCount int) []srvRecord {
+func (t *testDriver) expectSRVRecords(ctx context.Context, c *clusterClients, domainName string, expectedCount int) []srvRecord {
 	// Add trailing dot to prevent search domain from being appended
 	command := []string{"sh", "-c", "nslookup -type=SRV " + domainName + "."}
 
@@ -114,11 +114,11 @@ func (t *testDriver) expectSRVRecords(c *clusterClients, domainName string, expe
 
 	var srvRecs []srvRecord
 
-	Eventually(func(g Gomega) {
-		srvRecs = parseSRVRecords(t.execCmdOnRequestPod(c, command))
+	Eventually(func(g Gomega, ctx context.Context) {
+		srvRecs = parseSRVRecords(t.execCmdOnRequestPod(ctx, c, command))
 		g.Expect(srvRecs).To(HaveLen(expectedCount),
 			fmt.Sprintf("Expected %d SRV records but got %d: %v", expectedCount, len(srvRecs), srvRecs))
-	}, 20, 1).Should(Succeed(), reportNonConformant(""))
+	}, 20, 1).WithContext(ctx).Should(Succeed(), reportNonConformant(""))
 
 	return srvRecs
 }

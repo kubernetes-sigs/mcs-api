@@ -145,9 +145,7 @@ var (
 
 var _ = Describe("Connectivity", func() {
 	var (
-		namespace string
-
-		ctx           = context.Background()
+		namespace     string
 		serviceImport *v1beta1.ServiceImport
 		podIPs        []string
 		reqPod        *v1.Pod
@@ -183,7 +181,7 @@ var _ = Describe("Connectivity", func() {
 			})
 		}
 	)
-	BeforeEach(func() {
+	BeforeEach(func(ctx context.Context) {
 		namespace = fmt.Sprintf("mcse2e-conformance-%v", rand.Uint32())
 		_, err := cluster1.k8s.CoreV1().Namespaces().Create(ctx, &v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
@@ -205,12 +203,12 @@ var _ = Describe("Connectivity", func() {
 		imp := helloServiceImport
 		_, err = cluster1.mcs.MulticlusterV1beta1().ServiceImports(namespace).Create(ctx, &imp, metav1.CreateOptions{})
 		Expect(err).ToNot(HaveOccurred())
-		Eventually(func() string {
+		Eventually(func(ctx context.Context) string {
 			rp, err := cluster1.k8s.CoreV1().Pods(namespace).Get(ctx, requestPod.Name, metav1.GetOptions{})
 			Expect(err).ToNot(HaveOccurred())
 			return rp.Name
-		}).ShouldNot(BeEmpty())
-		Eventually(func() string {
+		}).WithContext(ctx).ShouldNot(BeEmpty())
+		Eventually(func(ctx context.Context) string {
 			pods, err := cluster2.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 				LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
 			})
@@ -219,7 +217,7 @@ var _ = Describe("Connectivity", func() {
 				return pods.Items[0].Status.PodIP
 			}
 			return ""
-		}, 30).ShouldNot(BeEmpty())
+		}, 30).WithContext(ctx).ShouldNot(BeEmpty())
 		pods, err := cluster2.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 			LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
 		})
@@ -230,11 +228,11 @@ var _ = Describe("Connectivity", func() {
 
 		exportService(ctx, cluster2, cluster1, namespace, svc.Name)
 
-		Eventually(func() []string {
+		Eventually(func(ctx context.Context) []string {
 			svcImport, err := cluster1.mcs.MulticlusterV1beta1().ServiceImports(namespace).Get(ctx, helloServiceImport.Name, metav1.GetOptions{})
 			Expect(err).ToNot(HaveOccurred())
 			return svcImport.Spec.IPs
-		}).ShouldNot(BeEmpty())
+		}).WithContext(ctx).ShouldNot(BeEmpty())
 		serviceImport, err = cluster1.mcs.MulticlusterV1beta1().ServiceImports(namespace).Get(ctx, helloServiceImport.Name, metav1.GetOptions{})
 		Expect(err).ToNot(HaveOccurred())
 
@@ -242,7 +240,7 @@ var _ = Describe("Connectivity", func() {
 		Expect(err).ToNot(HaveOccurred())
 		By("Created all in " + namespace)
 	})
-	AfterEach(func() {
+	AfterEach(func(ctx context.Context) {
 		if *noTearDown {
 			By(fmt.Sprintf("Skipping teardown. Test namespace %q", namespace))
 			By(fmt.Sprintf("Cluster 1: kubectl --kubeconfig %q -n %q", *kubeconfig1, namespace))
@@ -258,14 +256,14 @@ var _ = Describe("Connectivity", func() {
 	})
 
 	When("trying to reach a service exported by both the local and remote clusters", func() {
-		BeforeEach(func() {
+		BeforeEach(func(ctx context.Context) {
 			dep := helloDeployment
 			_, err := cluster1.k8s.AppsV1().Deployments(namespace).Create(ctx, &dep, metav1.CreateOptions{})
 			Expect(err).ToNot(HaveOccurred())
 			svc := helloService
 			_, err = cluster1.k8s.CoreV1().Services(namespace).Create(ctx, &svc, metav1.CreateOptions{})
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(func() string {
+			Eventually(func(ctx context.Context) string {
 				pods, err := cluster1.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 					LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
 				})
@@ -274,7 +272,7 @@ var _ = Describe("Connectivity", func() {
 					return pods.Items[0].Status.PodIP
 				}
 				return ""
-			}, 30).ShouldNot(BeEmpty())
+			}, 30).WithContext(ctx).ShouldNot(BeEmpty())
 			pods, err := cluster1.k8s.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
 				LabelSelector: metav1.FormatLabelSelector(helloDeployment.Spec.Selector),
 			})

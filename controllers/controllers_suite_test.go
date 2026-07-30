@@ -53,7 +53,7 @@ var (
 	testNS          string
 )
 
-var _ = BeforeSuite(func(done Done) {
+var _ = BeforeSuite(func(ctx context.Context) {
 	rand.Seed(GinkgoRandomSeed())
 	log.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
 	// Use Kind for a more up-to-date K8s
@@ -83,7 +83,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(k8s).ToNot(BeNil())
 
 	testNS = fmt.Sprintf("test-%v", time.Now().Unix())
-	Expect(k8s.Create(context.Background(), &v1.Namespace{
+	Expect(k8s.Create(ctx, &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testNS,
 		},
@@ -93,8 +93,7 @@ var _ = BeforeSuite(func(done Done) {
 		Scheme: scheme,
 	}
 
-	go Start(context.TODO(), cfg, log.Log, opts)
-	close(done)
+	go Start(ctx, cfg, log.Log, opts)
 })
 
 var _ = AfterSuite(func() {

@@ -74,12 +74,10 @@ var _ = Describe("Local service not impacted", func() {
 
 	var (
 		namespace string
-
-		ctx    = context.Background()
-		reqPod *v1.Pod
+		reqPod    *v1.Pod
 	)
 
-	BeforeEach(func() {
+	BeforeEach(func(ctx context.Context) {
 		namespace = fmt.Sprintf("mcse2e-conformance-%v", rand.Uint32())
 		_, err := cluster1.k8s.CoreV1().Namespaces().Create(ctx, &v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{Name: namespace},
@@ -146,7 +144,7 @@ var _ = Describe("Local service not impacted", func() {
 		Expect(err).ToNot(HaveOccurred())
 		By("Created all in " + namespace)
 	})
-	AfterEach(func() {
+	AfterEach(func(ctx context.Context) {
 		if *noTearDown {
 			By(fmt.Sprintf("Skipping teardown. Test namespace %q", namespace))
 			By(fmt.Sprintf("Cluster 1: kubectl --kubeconfig %q -n %q", *kubeconfig1, namespace))
@@ -156,7 +154,7 @@ var _ = Describe("Local service not impacted", func() {
 		Expect(cluster1.k8s.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})).To(Succeed())
 		Expect(cluster2.k8s.CoreV1().Namespaces().Delete(ctx, namespace, metav1.DeleteOptions{})).To(Succeed())
 	})
-	Specify("DNS resolves as expected", func() {
+	Specify("DNS resolves as expected", func(ctx context.Context) {
 		checkAllClustersReachable := func(command []string, clusterIDs ...string) {
 			clusters := map[string]int{}
 			Eventually(func(g Gomega) {
