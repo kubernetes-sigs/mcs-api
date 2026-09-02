@@ -5,11 +5,9 @@ reviewers:
   - lauralorenz
   - skitt
   - MrFreezeex
-  - munnerz
   - RainbowMango
   - ryanzhang-oss
-# Pending org membership
-# - jnpacker
+  - tpantelis
 
 approvers:
   - JeremyOT
