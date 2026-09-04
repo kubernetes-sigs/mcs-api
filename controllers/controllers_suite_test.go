@@ -104,4 +104,5 @@ var _ = AfterSuite(func() {
 
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
+	RunSpecs(t, "Controllers Suite")
 }
