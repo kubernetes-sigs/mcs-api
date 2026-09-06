@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -27,8 +28,51 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/mcs-api/pkg/apis/v1beta1"
 )
+
+func TestPortsEqual(t *testing.T) {
+	tcp := v1.ProtocolTCP
+	http := "HTTP"
+	https := "HTTPS"
+
+	cases := []struct {
+		name             string
+		current, desired []v1.ServicePort
+		want             bool
+	}{
+		{"both empty", nil, nil, true},
+		{"different length", []v1.ServicePort{{Port: 80}}, nil, false},
+		{"same port", []v1.ServicePort{{Port: 80, Protocol: tcp}}, []v1.ServicePort{{Port: 80, Protocol: tcp}}, true},
+		{"different port", []v1.ServicePort{{Port: 80}}, []v1.ServicePort{{Port: 81}}, false},
+		{
+			"ignores TargetPort set by the apiserver",
+			[]v1.ServicePort{{Port: 80, TargetPort: intstr.FromInt32(8080)}},
+			[]v1.ServicePort{{Port: 80}},
+			true,
+		},
+		{
+			"different AppProtocol",
+			[]v1.ServicePort{{Port: 80, AppProtocol: &http}},
+			[]v1.ServicePort{{Port: 80, AppProtocol: &https}},
+			false,
+		},
+		{
+			"same AppProtocol",
+			[]v1.ServicePort{{Port: 80, AppProtocol: &http}},
+			[]v1.ServicePort{{Port: 80, AppProtocol: &http}},
+			true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := portsEqual(c.current, c.desired); got != c.want {
+				t.Errorf("portsEqual(%v, %v) = %v, want %v", c.current, c.desired, got, c.want)
+			}
+		})
+	}
+}
 
 var _ = Describe("ServiceImport", func() {
 	var (
@@ -109,7 +153,23 @@ var _ = Describe("ServiceImport", func() {
 			}, 10).WithContext(ctx).Should(Succeed())
 			Expect(len(s.OwnerReferences)).To(Equal(1))
 			Expect(s.OwnerReferences[0].UID).To(Equal(serviceImport.UID))
-		}, 15)
+		})
+		It("updates derived service ports when the import's ports change", func(ctx context.Context) {
+			var s v1.Service
+			Eventually(func(ctx context.Context) error {
+				return k8s.Get(ctx, derivedServiceName, &s)
+			}, 10).WithContext(ctx).Should(Succeed())
+
+			var imp v1beta1.ServiceImport
+			Expect(k8s.Get(ctx, serviceName, &imp)).To(Succeed())
+			imp.Spec.Ports = []v1beta1.ServicePort{{Port: 81}}
+			Expect(k8s.Update(ctx, &imp)).To(Succeed())
+
+			Eventually(func(ctx context.Context) int32 {
+				Expect(k8s.Get(ctx, derivedServiceName, &s)).To(Succeed())
+				return s.Spec.Ports[0].Port
+			}, 10).WithContext(ctx).Should(Equal(int32(81)))
+		})
 		It("removes derived service", func(ctx context.Context) {
 			var s v1.Service
 			Eventually(func(ctx context.Context) error {

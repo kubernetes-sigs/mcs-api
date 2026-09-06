@@ -37,6 +37,28 @@ type ServiceImportReconciler struct {
 
 // +kubebuilder:rbac:groups=multicluster.x-k8s.io,resources=serviceimports,verbs=get;list;watch;update;patch
 
+// portsEqual reports whether current already matches the ports we manage on
+// the derived Service, ignoring fields like TargetPort that the apiserver
+// fills in on its own.
+func portsEqual(current, desired []v1.ServicePort) bool {
+	if len(current) != len(desired) {
+		return false
+	}
+	for i := range current {
+		c, d := current[i], desired[i]
+		if c.Name != d.Name || c.Protocol != d.Protocol || c.Port != d.Port {
+			return false
+		}
+		if (c.AppProtocol == nil) != (d.AppProtocol == nil) {
+			return false
+		}
+		if c.AppProtocol != nil && *c.AppProtocol != *d.AppProtocol {
+			return false
+		}
+	}
+	return true
+}
+
 func servicePorts(svcImport *v1beta1.ServiceImport) []v1.ServicePort {
 	ports := make([]v1.ServicePort, len(svcImport.Spec.Ports))
 	for i, p := range svcImport.Spec.Ports {
@@ -89,6 +111,15 @@ func (r *ServiceImportReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: svcImport.Annotations[DerivedServiceAnnotation]}, &svc); err == nil {
+		desiredPorts := servicePorts(&svcImport)
+		if portsEqual(svc.Spec.Ports, desiredPorts) {
+			return ctrl.Result{}, nil
+		}
+		svc.Spec.Ports = desiredPorts
+		if err := r.Client.Update(ctx, &svc); err != nil {
+			return ctrl.Result{}, err
+		}
+		log.Info("updated derived service ports")
 		return ctrl.Result{}, nil
 	} else if !apierrors.IsNotFound(err) {
 		return ctrl.Result{}, err
