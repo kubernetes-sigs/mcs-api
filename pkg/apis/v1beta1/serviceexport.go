@@ -76,13 +76,13 @@ type ServiceExportStatus struct {
 
 // +kubebuilder:object:root=true
 
-// ServiceExportList represents a list of endpoint slices
+// ServiceExportList represents a list of service exports
 type ServiceExportList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard list metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
-	// List of endpoint slices
+	// List of service exports
 	// +listType=set
 	Items []ServiceExport `json:"items"`
 }
