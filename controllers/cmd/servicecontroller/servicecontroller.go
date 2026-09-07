@@ -37,8 +37,14 @@ var (
 )
 
 func init() {
-	clientgoscheme.AddToScheme(scheme)
-	v1beta1.AddToScheme(scheme)
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		setupLog.Error(err, "problem registering client-go scheme")
+		os.Exit(1)
+	}
+	if err := v1beta1.Install(scheme); err != nil {
+		setupLog.Error(err, "problem registering v1beta1 scheme")
+		os.Exit(1)
+	}
 }
 
 func main() {
