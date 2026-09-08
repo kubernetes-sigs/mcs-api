@@ -18,12 +18,14 @@ package controllers
 
 import (
 	"context"
+	"slices"
 
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/mcs-api/pkg/apis/v1beta1"
@@ -41,22 +43,9 @@ type ServiceImportReconciler struct {
 // the derived Service, ignoring fields like TargetPort that the apiserver
 // fills in on its own.
 func portsEqual(current, desired []v1.ServicePort) bool {
-	if len(current) != len(desired) {
-		return false
-	}
-	for i := range current {
-		c, d := current[i], desired[i]
-		if c.Name != d.Name || c.Protocol != d.Protocol || c.Port != d.Port {
-			return false
-		}
-		if (c.AppProtocol == nil) != (d.AppProtocol == nil) {
-			return false
-		}
-		if c.AppProtocol != nil && *c.AppProtocol != *d.AppProtocol {
-			return false
-		}
-	}
-	return true
+	return slices.EqualFunc(current, desired, func(c, d v1.ServicePort) bool {
+		return c.Name == d.Name && c.Protocol == d.Protocol && c.Port == d.Port && ptr.Equal(c.AppProtocol, d.AppProtocol)
+	})
 }
 
 func servicePorts(svcImport *v1beta1.ServiceImport) []v1.ServicePort {
