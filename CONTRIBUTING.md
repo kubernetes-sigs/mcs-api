@@ -22,5 +22,5 @@ If your repo has certain guidelines for contribution, put them here ahead of the
 
 ## Contact Information
 
-- [Slack](https://kubernetes.slack.com/messages/sig-service-catalog)
-- [Mailing List](https://groups.google.com/forum/#!forum/kubernetes-sig-service-catalog)
+- [Slack](https://kubernetes.slack.com/messages/sig-multicluster)
+- [Mailing List](https://groups.google.com/forum/#!forum/kubernetes-sig-multicluster)
