@@ -191,13 +191,13 @@ const (
 
 // +kubebuilder:object:root=true
 
-// ServiceImportList represents a list of endpoint slices
+// ServiceImportList represents a list of service imports
 type ServiceImportList struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard list metadata.
 	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
-	// List of endpoint slices
+	// List of service imports
 	// +listType=set
 	Items []ServiceImport `json:"items"`
 }
