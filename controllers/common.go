@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/base32"
-	"os"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -47,7 +46,7 @@ func Start(ctx context.Context, cfg *rest.Config, setupLog logr.Logger, opts ctr
 	mgr, err := ctrl.NewManager(cfg, opts)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
+		return err
 	}
 
 	if err = (&ServiceImportReconciler{
