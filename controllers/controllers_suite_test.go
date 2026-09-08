@@ -62,7 +62,7 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	kubeconfig, err := clusterProvider.KubeConfig(clusterName, false)
 	Expect(err).ToNot(HaveOccurred())
 
-	cfg, err := clientcmd.RESTConfigFromKubeConfig([]byte(kubeconfig))
+	cfg, err = clientcmd.RESTConfigFromKubeConfig([]byte(kubeconfig))
 	Expect(err).ToNot(HaveOccurred())
 	scheme := runtime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
