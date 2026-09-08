@@ -164,5 +164,5 @@ func (r *ServiceImportReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 // SetupWithManager wires up the controller.
 func (r *ServiceImportReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&v1beta1.ServiceImport{}).Complete(r)
+	return ctrl.NewControllerManagedBy(mgr).For(&v1beta1.ServiceImport{}).Owns(&v1.Service{}).Complete(r)
 }

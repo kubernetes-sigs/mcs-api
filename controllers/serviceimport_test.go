@@ -170,6 +170,20 @@ var _ = Describe("ServiceImport", func() {
 				return s.Spec.Ports[0].Port
 			}, 10).WithContext(ctx).Should(Equal(int32(81)))
 		})
+		It("reverts a direct edit of the derived service's ports", func(ctx context.Context) {
+			var s v1.Service
+			Eventually(func(ctx context.Context) error {
+				return k8s.Get(ctx, derivedServiceName, &s)
+			}, 10).WithContext(ctx).Should(Succeed())
+
+			s.Spec.Ports[0].Port = 81
+			Expect(k8s.Update(ctx, &s)).To(Succeed())
+
+			Eventually(func(ctx context.Context) int32 {
+				Expect(k8s.Get(ctx, derivedServiceName, &s)).To(Succeed())
+				return s.Spec.Ports[0].Port
+			}, 10).WithContext(ctx).Should(Equal(int32(80)))
+		})
 		It("removes derived service", func(ctx context.Context) {
 			var s v1.Service
 			Eventually(func(ctx context.Context) error {
