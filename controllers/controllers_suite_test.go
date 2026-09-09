@@ -50,6 +50,11 @@ var _ = BeforeSuite(func(ctx context.Context) {
 	rand.Seed(GinkgoRandomSeed())
 	log.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
 
+	// Eventually(...).WithContext(ctx) otherwise never times out on its own: the
+	// spec context passed by Ginkgo has no deadline, so a stuck assertion hangs
+	// until go test's own timeout kills the whole binary.
+	EnforceDefaultTimeoutsWhenUsingContexts()
+
 	scheme := runtime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
 	Expect(v1beta1.AddToScheme(scheme)).To(Succeed())
