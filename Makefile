@@ -23,6 +23,7 @@ IMG ?= mcs-api-controller:latest
 CRD_OPTIONS ?= "crd:crdVersions=v1"
 
 CONTROLLER_GEN=go -C tools run sigs.k8s.io/controller-tools/cmd/controller-gen
+SETUP_ENVTEST=go -C tools run sigs.k8s.io/controller-runtime/tools/setup-envtest
 # enable Go modules
 export GO111MODULE=on
 
@@ -69,6 +70,7 @@ manifests:
 
 # Run tests
 .PHONY: test
+test: export KUBEBUILDER_ASSETS := $(shell $(SETUP_ENVTEST) use 1.34 -p path)
 test: generate fmt vet manifests
 	for m in . controllers; do go -C $$m test ./... -coverprofile cover.out; done
 

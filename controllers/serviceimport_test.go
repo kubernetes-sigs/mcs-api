@@ -91,7 +91,7 @@ var _ = Describe("ServiceImport", func() {
 				Expect(k8s.Get(ctx, serviceName, &s)).To(Succeed())
 				return s.Annotations[DerivedServiceAnnotation]
 			}, 10).WithContext(ctx).Should(Equal(derivedName(serviceName)))
-		}, 10)
+		})
 		It("has derived service IP", func(ctx context.Context) {
 			var s v1beta1.ServiceImport
 			Eventually(func(ctx context.Context) string {
@@ -101,7 +101,7 @@ var _ = Describe("ServiceImport", func() {
 				}
 				return ""
 			}, 10).WithContext(ctx).ShouldNot(BeEmpty())
-		}, 15)
+		})
 		It("created derived service", func(ctx context.Context) {
 			var s v1.Service
 			Eventually(func(ctx context.Context) error {
@@ -109,7 +109,7 @@ var _ = Describe("ServiceImport", func() {
 			}, 10).WithContext(ctx).Should(Succeed())
 			Expect(len(s.OwnerReferences)).To(Equal(1))
 			Expect(s.OwnerReferences[0].UID).To(Equal(serviceImport.UID))
-		}, 15)
+		})
 		It("removes derived service", func(ctx context.Context) {
 			var s v1.Service
 			Eventually(func(ctx context.Context) error {
@@ -121,7 +121,7 @@ var _ = Describe("ServiceImport", func() {
 			Eventually(func(ctx context.Context) error {
 				return k8s.Get(ctx, derivedServiceName, &s)
 			}, 15).WithContext(ctx).ShouldNot(Succeed())
-		}, 15)
+		})
 	})
 	Context("created with IP", func() {
 		BeforeEach(func(ctx context.Context) {
@@ -154,7 +154,7 @@ var _ = Describe("ServiceImport", func() {
 				}
 				return ""
 			}, 10).WithContext(ctx).Should(Equal(s.Spec.ClusterIP))
-		}, 15)
+		})
 	})
 	Context("created with existing clustersetIP", func() {
 		BeforeEach(func(ctx context.Context) {
@@ -188,6 +188,6 @@ var _ = Describe("ServiceImport", func() {
 				}
 				return ""
 			}, 10).WithContext(ctx).Should(Equal(s.Status.LoadBalancer.Ingress[0].IP))
-		}, 15)
+		})
 	})
 })

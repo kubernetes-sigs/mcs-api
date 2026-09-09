@@ -31,49 +31,39 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/kind/pkg/cluster"
 	"sigs.k8s.io/mcs-api/pkg/apis/v1beta1"
 )
 
-const (
-	clusterName = "test-cluster"
-)
-
 var (
-	cfg             *rest.Config
-	k8s             client.Client
-	env             *envtest.Environment
-	clusterProvider *cluster.Provider
-	testNS          string
+	cfg    *rest.Config
+	k8s    client.Client
+	env    *envtest.Environment
+	testNS string
 )
 
 var _ = BeforeSuite(func(ctx context.Context) {
 	rand.Seed(GinkgoRandomSeed())
 	log.SetLogger(zap.New(zap.UseDevMode(true), zap.WriteTo(GinkgoWriter)))
-	// Use Kind for a more up-to-date K8s
-	clusterProvider = cluster.NewProvider()
-	Expect(clusterProvider.Create(clusterName)).To(Succeed())
-	kubeconfig, err := clusterProvider.KubeConfig(clusterName, false)
-	Expect(err).ToNot(HaveOccurred())
 
-	cfg, err := clientcmd.RESTConfigFromKubeConfig([]byte(kubeconfig))
-	Expect(err).ToNot(HaveOccurred())
+	// Eventually(...).WithContext(ctx) otherwise never times out on its own: the
+	// spec context passed by Ginkgo has no deadline, so a stuck assertion hangs
+	// until go test's own timeout kills the whole binary.
+	EnforceDefaultTimeoutsWhenUsingContexts()
+
 	scheme := runtime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
 	Expect(v1beta1.AddToScheme(scheme)).To(Succeed())
-	Expect(err).ToNot(HaveOccurred())
-	existingCluster := true
+
 	env = &envtest.Environment{
-		CRDDirectoryPaths:  []string{filepath.Join("..", "..", "config", "crd")},
-		UseExistingCluster: &existingCluster,
-		Config:             cfg,
+		CRDDirectoryPaths: []string{filepath.Join("..", "..", "config", "crd")},
 	}
+
+	var err error
 	cfg, err = env.Start()
 	Expect(err).ToNot(HaveOccurred())
 	Expect(cfg).ToNot(BeNil())
@@ -97,11 +87,11 @@ var _ = BeforeSuite(func(ctx context.Context) {
 })
 
 var _ = AfterSuite(func() {
-	Expect(clusterProvider.Delete(clusterName, "")).To(Succeed())
 	err := env.Stop()
 	Expect(err).ToNot(HaveOccurred())
 })
 
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
+	RunSpecs(t, "Controllers Suite")
 }
