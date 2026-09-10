@@ -53,28 +53,24 @@ func Start(ctx context.Context, cfg *rest.Config, setupLog logr.Logger, opts ctr
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("ServiceImport"),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ServiceImport")
-		return err
+		return fmt.Errorf("unable to create controller %q: %w", "ServiceImport", err)
 	}
 	if err = (&ServiceReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Service"),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Service")
-		return err
+		return fmt.Errorf("unable to create controller %q: %w", "Service", err)
 	}
 	if err = (&EndpointSliceReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("EndpointSlice"),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "EndpointSlice")
-		return err
+		return fmt.Errorf("unable to create controller %q: %w", "EndpointSlice", err)
 	}
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctx); err != nil {
-		setupLog.Error(err, "problem running manager")
-		return err
+		return fmt.Errorf("problem running manager: %w", err)
 	}
 	return nil
 }
