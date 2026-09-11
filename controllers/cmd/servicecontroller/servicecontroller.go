@@ -21,6 +21,7 @@ import (
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -37,14 +38,8 @@ var (
 )
 
 func init() {
-	if err := clientgoscheme.AddToScheme(scheme); err != nil {
-		setupLog.Error(err, "problem registering client-go scheme")
-		os.Exit(1)
-	}
-	if err := v1beta1.Install(scheme); err != nil {
-		setupLog.Error(err, "problem registering v1beta1 scheme")
-		os.Exit(1)
-	}
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(v1beta1.Install(scheme))
 }
 
 func main() {
