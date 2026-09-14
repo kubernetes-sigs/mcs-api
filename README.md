@@ -6,6 +6,12 @@ This repo contains the initial implementation according to [KEP-1645][kep].
 
 [kep]: https://github.com/kubernetes/enhancements/tree/master/keps/sig-multicluster/1645-multi-cluster-services-api
 
+## Tutorials
+
+The [MCS API tutorials](docs/tutorials.md) walk through common, implementation-agnostic
+use cases: exporting a stateful service from one cluster, combining stateless
+services across regions, and using the API during a blue-green upgrade.
+
 ## Try it out
 
 To see the API in action, run `make demo` to build and run a local demo against
