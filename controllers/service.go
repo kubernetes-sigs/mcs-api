@@ -62,7 +62,7 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 	var svcImport v1beta1.ServiceImport
 	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: importName}, &svcImport); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	ipsLen := min(2, len(service.Spec.ClusterIPs))
